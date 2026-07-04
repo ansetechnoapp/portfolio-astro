@@ -1,7 +1,8 @@
 ---
-export const prerender = true;
+export const prerender = false;
 
-import { type CollectionEntry, getCollection } from "astro:content";
+import { getCollection } from "astro:content";
+import { marked } from "marked";
 
 import Layout from "../../layouts/Layout.astro";
 
@@ -12,43 +13,75 @@ import Pill from "../../components/reactJS/Pill";
 import TabbedInterface from "../../components/reactJS/TabbedInterface";
 import ProjectFeatures from "../../components/reactJS/ProjectFeatures";
 import ImageGallery from "../../components/reactJS/ImageGallery";
+import { fetchPortfolioAstroBootstrap } from "../../lib/zodback-astro-api";
 
-interface Props {
-  entry: CollectionEntry<"work">;
+const routeSlug = String(Astro.params.slug || "");
+const [localEntries, astroBootstrap] = await Promise.all([
+  getCollection("work"),
+  fetchPortfolioAstroBootstrap(),
+]);
+const localEntry = localEntries.find((entry) => entry.slug === routeSlug);
+const apiProject = astroBootstrap?.projects?.find(
+  (project) => project.slug === routeSlug,
+);
+
+if (!apiProject && !localEntry) {
+  throw new Error(`Project not found for slug: ${routeSlug}`);
 }
 
-// This is a dynamic route that generates a page for every Markdown file in src/content/
-// Read more about dynamic routes and this `getStaticPaths` function in the Astro docs:
-// https://docs.astro.build/en/core-concepts/routing/#dynamic-routes
-export async function getStaticPaths() {
-  const work = await getCollection("work");
-  return work.map((entry) => ({
-    params: { slug: entry.slug },
-    props: { entry },
-  }));
-}
+const sourceProject = apiProject
+  ? {
+      slug: apiProject.slug,
+      data: {
+        title: apiProject.data.title,
+        description: apiProject.data.description,
+        tech: apiProject.data.tech || [],
+        publishDate: apiProject.data.publishDate
+          ? new Date(apiProject.data.publishDate)
+          : undefined,
+        tags: apiProject.data.tags || [],
+        img: apiProject.data.img || "/assets/social-preview.jpg",
+        img_alt: apiProject.data.img_alt || undefined,
+        github: apiProject.data.github || undefined,
+        liveDemo: apiProject.data.liveDemo || undefined,
+        device: apiProject.data.device || undefined,
+        client: apiProject.data.client || undefined,
+        services: apiProject.data.services || undefined,
+        projectType: apiProject.data.projectType || undefined,
+        duration: apiProject.data.duration || undefined,
+        challenge: apiProject.data.challenge || undefined,
+        solution: apiProject.data.solution || undefined,
+        additionalImages: apiProject.data.additionalImages || undefined,
+        features: apiProject.data.features || undefined,
+        demoVideo: apiProject.data.demoVideo || undefined,
+      },
+    }
+  : localEntry!;
 
-const { entry } = Astro.props;
-const { Content } = await entry.render();
+const localRendered = localEntry ? await localEntry.render() : null;
+const Content = localRendered?.Content;
+const renderedBodyHtml = apiProject
+  ? await marked.parse(apiProject.bodyMarkdown || "")
+  : null;
 
 // Enhanced SEO metadata for projects
-const projectTitle = `${entry.data.title} | Kevin Otty - Développeur Web & Mobile`;
-const projectDescription = entry.data.description || `Découvrez ${entry.data.title}, un projet de développement ${entry.data.device === 'mobile' ? 'mobile' : 'web'} réalisé par Kevin Otty. Technologies utilisées: ${entry.data.tech?.join(', ') || 'développement moderne'}.`;
+const projectTitle = `${sourceProject.data.title} | Kevin Otty - Développeur Web & Mobile`;
+const projectDescription = sourceProject.data.description || `Découvrez ${sourceProject.data.title}, un projet de développement ${sourceProject.data.device === 'mobile' ? 'mobile' : 'web'} réalisé par Kevin Otty. Technologies utilisées: ${sourceProject.data.tech?.join(', ') || 'développement moderne'}.`;
 
 // Prepare project metadata for SEO
 const projectMetadata = {
-  publishedTime: entry.data.publishDate
-    ? new Date(entry.data.publishDate).toISOString()
+  publishedTime: sourceProject.data.publishDate
+    ? new Date(sourceProject.data.publishDate).toISOString()
     : new Date().toISOString(),
   modifiedTime: new Date().toISOString(),
-  tags: entry.data.tags || [],
+  tags: sourceProject.data.tags || [],
 };
 ---
 
 <Layout
   title={projectTitle}
   description={projectDescription}
-  image={entry.data.img || "/assets/social-preview.jpg"}
+  image={sourceProject.data.img || "/assets/social-preview.jpg"}
   type="project"
   article={projectMetadata}
 >
@@ -58,13 +91,13 @@ const projectMetadata = {
         <a class="back-link" href="/work/"
           ><Icon icon="arrow-left" /> Back to Projects</a
         >
-        <h1 class="project-title">{entry.data.title}</h1>
-        <p class="project-description">{entry.data.description}</p>
+        <h1 class="project-title">{sourceProject.data.title}</h1>
+        <p class="project-description">{sourceProject.data.description}</p>
 
          <!-- Enhanced Hero Image with Professional Mockup Context -->
     <div class="project-showcase">
       {
-        entry.data.img && (
+        sourceProject.data.img && (
           <div class="main-image-container">
             <div class="mockup-frame">
               <div class="main-image">
@@ -72,21 +105,21 @@ const projectMetadata = {
                   {/* AVIF format */}
                   <source
                     type="image/avif"
-                    srcset={`${entry.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_optimized.avif")} 1x, ${entry.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_640w.avif")} 640w, ${entry.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_1024w.avif")} 1024w`}
+                    srcset={`${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_optimized.avif")} 1x, ${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_640w.avif")} 640w, ${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_1024w.avif")} 1024w`}
                     sizes="(max-width: 768px) 100vw, 1200px"
                     onerror="this.style.display='none'"
                   />
                   {/* WebP format */}
                   <source
                     type="image/webp"
-                    srcset={`${entry.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_optimized.webp")} 1x, ${entry.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_640w.webp")} 640w, ${entry.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_1024w.webp")} 1024w`}
+                    srcset={`${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_optimized.webp")} 1x, ${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_640w.webp")} 640w, ${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_1024w.webp")} 1024w`}
                     sizes="(max-width: 768px) 100vw, 1200px"
                     onerror="this.style.display='none'"
                   />
                   {/* Fallback format */}
                   <img
-                    src={entry.data.img}
-                    alt={entry.data.img_alt || "Project image"}
+                    src={sourceProject.data.img}
+                    alt={sourceProject.data.img_alt || "Project image"}
                     loading="lazy"
                     decoding="async"
                     onerror="this.style.display='none'; console.warn('Failed to load image:', this.src);"
@@ -105,41 +138,41 @@ const projectMetadata = {
             <div class="project-overview">
               <h2>Project Overview</h2>
               <p class="overview-text">
-                {entry.data.description}
+                {sourceProject.data.description}
               </p>
             </div>
 
             <div class="project-details-box">
               <h3>Project Details</h3>
               <div class="details-grid">
-                {entry.data.client && (
+                {sourceProject.data.client && (
                   <div class="detail-item">
                     <span class="detail-label">Client:</span>
-                    <span class="detail-value">{entry.data.client}</span>
+                    <span class="detail-value">{sourceProject.data.client}</span>
                   </div>
                 )}
-                {entry.data.services && (
+                {sourceProject.data.services && (
                   <div class="detail-item">
                     <span class="detail-label">Services:</span>
-                    <span class="detail-value">{entry.data.services.join(', ')}</span>
+                    <span class="detail-value">{sourceProject.data.services.join(', ')}</span>
                   </div>
                 )}
-                {entry.data.publishDate && (
+                {sourceProject.data.publishDate && (
                   <div class="detail-item">
                     <span class="detail-label">Date:</span>
-                    <span class="detail-value">{new Date(entry.data.publishDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                    <span class="detail-value">{new Date(sourceProject.data.publishDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                   </div>
                 )}
-                {entry.data.duration && (
+                {sourceProject.data.duration && (
                   <div class="detail-item">
                     <span class="detail-label">Duration:</span>
-                    <span class="detail-value">{entry.data.duration}</span>
+                    <span class="detail-value">{sourceProject.data.duration}</span>
                   </div>
                 )}
-                {entry.data.projectType && (
+                {sourceProject.data.projectType && (
                   <div class="detail-item">
                     <span class="detail-label">Type:</span>
-                    <span class="detail-value">{entry.data.projectType}</span>
+                    <span class="detail-value">{sourceProject.data.projectType}</span>
                   </div>
                 )}
               </div>
@@ -147,7 +180,7 @@ const projectMetadata = {
               <div class="tech-showcase">
                 <h4>Technologies Used</h4>
                 <div class="tech-pills">
-                  {entry.data.tech?.map((tech) => (
+                  {sourceProject.data.tech?.map((tech) => (
                     <Pill>{tech}</Pill>
                   ))}
                 </div>
@@ -160,16 +193,16 @@ const projectMetadata = {
           <div class="tags-container">
             <h3>Category</h3>
             <div class="tags">
-              {entry.data.tags.map((t) => <Pill>{t}</Pill>)}
+              {sourceProject.data.tags.map((t) => <Pill>{t}</Pill>)}
             </div>
           </div>
         </div>
 
         <div class="cta-buttons">
           {
-            entry.data.liveDemo && entry.data.liveDemo.startsWith('http') && (
+            sourceProject.data.liveDemo && sourceProject.data.liveDemo.startsWith('http') && (
               <a
-                href={entry.data.liveDemo}
+                href={sourceProject.data.liveDemo}
                 class="btn primary enhanced-btn"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -183,9 +216,9 @@ const projectMetadata = {
             )
           }
           {
-            entry.data.github && entry.data.github.startsWith('http') && (
+            sourceProject.data.github && sourceProject.data.github.startsWith('http') && (
               <a
-                href={entry.data.github}
+                href={sourceProject.data.github}
                 class="btn secondary enhanced-btn"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -214,10 +247,10 @@ const projectMetadata = {
     </div>
 
     <!-- Challenge & Solution Narrative Section -->
-    {(entry.data.challenge || entry.data.solution) && (
+    {(sourceProject.data.challenge || sourceProject.data.solution) && (
       <div class="narrative-section">
         <div class="narrative-container">
-          {entry.data.challenge && (
+          {sourceProject.data.challenge && (
             <div class="challenge-section">
               <h2>
                 <svg class="section-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -226,12 +259,12 @@ const projectMetadata = {
                 The Challenge
               </h2>
               <div class="narrative-content">
-                <p>{entry.data.challenge}</p>
+                <p>{sourceProject.data.challenge}</p>
               </div>
             </div>
           )}
 
-          {entry.data.solution && (
+          {sourceProject.data.solution && (
             <div class="solution-section">
               <h2>
                 <svg class="section-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -240,7 +273,7 @@ const projectMetadata = {
                 The Solution
               </h2>
               <div class="narrative-content">
-                <p>{entry.data.solution}</p>
+                <p>{sourceProject.data.solution}</p>
               </div>
             </div>
           )}
@@ -250,7 +283,7 @@ const projectMetadata = {
 
     <div class="project-content">
       <div class="content-wrapper">
-        {entry.data.features && entry.data.features.length > 0 ? (
+        {sourceProject.data.features && sourceProject.data.features.length > 0 ? (
           <div class="project-tabs">
             <!-- Tab Navigation -->
             <div class="tab-nav border-b border-gray-200 dark:border-gray-700 mb-6">
@@ -285,19 +318,25 @@ const projectMetadata = {
             <!-- Tab Content -->
             <div class="tab-content">
               <div id="overview-tab" class="tab-panel active" role="tabpanel">
-                <Content />
+                {
+                  renderedBodyHtml ? (
+                    <Fragment set:html={renderedBodyHtml} />
+                  ) : (
+                    Content && <Content />
+                  )
+                }
               </div>
 
               <div id="features-tab" class="tab-panel hidden" role="tabpanel">
                 <ProjectFeatures
                   client:load
-                  features={entry.data.features}
+                  features={sourceProject.data.features}
                 />
               </div>
 
               <div id="technologies-tab" class="tab-panel hidden space-y-6" role="tabpanel">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {entry.data.tech?.map((tech, index) => (
+                  {sourceProject.data.tech?.map((tech, index) => (
                     <div key={index} class="tech-card bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                       <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
@@ -318,18 +357,22 @@ const projectMetadata = {
             </div>
           </div>
         ) : (
-          <Content />
+          renderedBodyHtml ? (
+            <Fragment set:html={renderedBodyHtml} />
+          ) : (
+            Content && <Content />
+          )
         )}
       </div>
 
       {
-        entry.data.additionalImages &&
-          entry.data.additionalImages.length > 0 && (
+        sourceProject.data.additionalImages &&
+          sourceProject.data.additionalImages.length > 0 && (
             <div class="additional-images">
               <h2>Project Gallery</h2>
               <ImageGallery
                 client:load
-                images={entry.data.additionalImages.map(img => ({
+                images={sourceProject.data.additionalImages.map(img => ({
                   url: img.url,
                   alt: img.alt || "",
                   caption: img.caption

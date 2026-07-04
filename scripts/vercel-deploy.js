@@ -69,47 +69,46 @@ async function checkBackgroundImages() {
 async function checkEnvironmentVariables() {
   console.log('\n🔍 Checking environment variables...');
 
-  const requiredVars = [
+  const recommendedVars = [
+    'PORTFOLIO_API_BASE_URL',
+    'PORTFOLIO_API_ORIGIN',
+    'PORTFOLIO_API_TOKEN',
+    'PORTFOLIO_SHOWCASE_SLUG',
     'PUBLIC_SUPABASE_URL',
-    'PUBLIC_SUPABASE_ANON_KEY'
+    'PUBLIC_SUPABASE_ANON_KEY',
   ];
 
-  // Check if .env file exists
+  let envContent = '';
   try {
     const envPath = path.join(rootDir, '.env');
-    const envContent = await fs.readFile(envPath, 'utf-8');
-
-    const hasSupabaseUrl = envContent.includes('PUBLIC_SUPABASE_URL');
-    const hasSupabaseKey = envContent.includes('PUBLIC_SUPABASE_ANON_KEY');
-
-    if (hasSupabaseUrl && hasSupabaseKey) {
-      console.log('✅ Environment variables found in .env file');
-      console.log('⚠️  Make sure these are also set in your Vercel dashboard under Settings > Environment Variables');
-      return true;
-    }
+    envContent = await fs.readFile(envPath, 'utf-8');
   } catch (error) {
-    // .env file doesn't exist or can't be read
+    // .env doesn't exist locally, fall back to process.env
   }
 
-  const missing = [];
+  const detected = recommendedVars.filter((varName) => {
+    if (envContent.includes(`${varName}=`)) return true;
+    return Boolean(process.env[varName]);
+  });
 
-  for (const varName of requiredVars) {
-    if (!process.env[varName]) {
-      missing.push(varName);
-    }
+  if (detected.length > 0) {
+    console.log(`✅ Variables detectées: ${detected.join(', ')}`);
   }
 
-  if (missing.length > 0) {
-    console.log(`⚠️  Environment variables not detected locally: ${missing.join(', ')}`);
-    console.log('This is normal for local development. Make sure to set these in your Vercel dashboard under Settings > Environment Variables');
-    console.log('Required variables:');
-    console.log('- PUBLIC_SUPABASE_URL');
-    console.log('- PUBLIC_SUPABASE_ANON_KEY');
-    console.log('- NODE_ENV (set to "production")');
-    return true; // Don't fail the check for missing local env vars
+  const missingPortfolioVars = ['PORTFOLIO_API_BASE_URL', 'PORTFOLIO_API_ORIGIN', 'PORTFOLIO_API_TOKEN'].filter(
+    (varName) => !detected.includes(varName),
+  );
+
+  if (missingPortfolioVars.length > 0) {
+    console.log(`⚠️  Variables portfolio non détectées: ${missingPortfolioVars.join(', ')}`);
+    console.log('Assurez-vous qu’elles sont configurées dans Vercel pour que le portfolio charge les données ZodBack en production.');
   }
 
-  console.log('✅ All required environment variables are set');
+  if (!detected.includes('PUBLIC_SUPABASE_URL') || !detected.includes('PUBLIC_SUPABASE_ANON_KEY')) {
+    console.log('ℹ️  Variables Supabase non détectées localement. Vérifiez-les seulement si vous utilisez encore les fonctionnalités concernées.');
+  }
+
+  console.log('✅ Environment variables check completed');
   return true;
 }
 
@@ -130,14 +129,25 @@ async function checkBuildConfig() {
       return false;
     }
     
-    // Check vercel.json
-    const vercelPath = path.join(rootDir, 'vercel.json');
-    const vercelContent = await fs.readFile(vercelPath, 'utf-8');
-    const vercelConfig = JSON.parse(vercelContent);
-    
-    if (vercelConfig.buildCommand !== 'pnpm run build') {
-      console.log('Vercel build command should be "pnpm run build"');
+    const astroConfigPath = path.join(rootDir, 'astro.config.mjs');
+    const astroConfig = await fs.readFile(astroConfigPath, 'utf-8');
+
+    if (!astroConfig.includes("@astrojs/vercel")) {
+      console.log('❌ Astro config must use the Vercel adapter');
       return false;
+    }
+
+    const vercelPath = path.join(rootDir, 'vercel.json');
+    try {
+      const vercelContent = await fs.readFile(vercelPath, 'utf-8');
+      const vercelConfig = JSON.parse(vercelContent);
+
+      if (vercelConfig.buildCommand && vercelConfig.buildCommand !== 'bun run build') {
+        console.log('❌ Vercel build command should be "bun run build" when vercel.json is present');
+        return false;
+      }
+    } catch (error) {
+      console.log('ℹ️  No vercel.json found; using Astro Vercel adapter defaults.');
     }
     
     console.log('✅ Build configuration is correct');
