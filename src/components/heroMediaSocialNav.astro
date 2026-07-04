@@ -2,12 +2,14 @@
 import Icon from "./reactJS/Icon";
 import type { iconPaths } from "./IconPaths";
 
-/** Icon links to social media */
-const iconLinks: {
+interface SocialLink {
   label: string;
   href: string;
   icon: keyof typeof iconPaths;
-}[] = [
+}
+
+/** Icon links to social media */
+const defaultIconLinks: SocialLink[] = [
   { label: "Twitter", href: "https://x.com/ottianselme", icon: "twitter-logo" },
   {
     label: "GitHub",
@@ -20,11 +22,12 @@ const iconLinks: {
     icon: "youtube-logo",
   },
 ];
+const { links = defaultIconLinks } = Astro.props as { links?: SocialLink[] };
 ---
 
 <div class="hero-media-social-nav">
   {
-    iconLinks.map(({ href, icon, label }, index) => (
+    links.map(({ href, icon, label }, index) => (
       <a
         href={href}
         class="social-link"

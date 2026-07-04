@@ -6,8 +6,81 @@ import dataUser from "../data/User.json";
 const lang = getLangFromCookies(Astro.cookies);
 const i18n = getTranslations(lang);
 
+interface ContactCTAInfo {
+  email?: string;
+  phone?: string;
+  website?: string;
+  location?: string;
+}
+
+interface ContactSocialLink {
+  label: string;
+  href: string;
+  platform?: string;
+}
+
+const defaultContactInfo: ContactCTAInfo = {
+  email: dataUser.email,
+  phone: dataUser.phone,
+  website: dataUser.website,
+  location: i18n.contact.basedIn,
+};
+
+const defaultSocialLinks: ContactSocialLink[] = [
+  {
+    label: "GitHub",
+    href: "https://github.com/ansetechnoapp",
+    platform: "github",
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/anscod/",
+    platform: "linkedin",
+  },
+  {
+    label: "Pinterest",
+    href: "https://pinterest.com/anscoddesign",
+    platform: "pinterest",
+  },
+  {
+    label: "Instagram",
+    href: "https://instagram.com/anscod.otty",
+    platform: "instagram",
+  },
+];
+
+const {
+  contactInfo = defaultContactInfo,
+  socialLinks = defaultSocialLinks,
+  availabilityLabel = i18n.contactCTA.available || "Available for new projects",
+} = Astro.props as {
+  contactInfo?: ContactCTAInfo;
+  socialLinks?: ContactSocialLink[];
+  availabilityLabel?: string;
+};
+
 const copyEmailLabel = i18n.contactCTA.copyEmail;
 const copiedLabel = i18n.contactCTA.copied;
+const whatsappDigits = (contactInfo.phone || "").replace(/\D/g, "");
+const whatsappHref = whatsappDigits
+  ? `https://wa.me/${whatsappDigits}`
+  : "https://wa.me/22997279001";
+const websiteHref = contactInfo.website?.startsWith("http")
+  ? contactInfo.website
+  : `https://${contactInfo.website || dataUser.website}`;
+const websiteLabel = contactInfo.website || dataUser.website;
+const socialVisualMap: Record<
+  string,
+  { iconClass: string; buttonClass: string }
+> = {
+  github: { iconClass: "fab fa-github", buttonClass: "github" },
+  linkedin: { iconClass: "fab fa-linkedin-in", buttonClass: "linkedin" },
+  pinterest: { iconClass: "fab fa-pinterest", buttonClass: "pinterest" },
+  instagram: { iconClass: "fab fa-instagram", buttonClass: "instagram" },
+  youtube: { iconClass: "fab fa-youtube", buttonClass: "youtube" },
+  twitter: { iconClass: "fab fa-x-twitter", buttonClass: "twitter" },
+  x: { iconClass: "fab fa-x-twitter", buttonClass: "twitter" },
+};
 ---
 
 <aside class="contact-cta-premium" id="contact-cta">
@@ -28,7 +101,7 @@ const copiedLabel = i18n.contactCTA.copied;
         <div class="contact-info-side">
           <div class="status-badge" data-aos="fade-right">
             <span class="dot"></span>
-            <span class="status-text">{i18n.contactCTA.available || "Available for new projects"}</span>
+            <span class="status-text">{availabilityLabel}</span>
           </div>
           
           <h2 class="title-gradient" data-aos="fade-up">
@@ -41,7 +114,7 @@ const copiedLabel = i18n.contactCTA.copied;
 
           <!-- WhatsApp mis en avant ici -->
           <div class="highlight-box" data-aos="fade-up" data-aos-delay="200">
-            <a href="https://wa.me/22997279001" target="_blank" rel="noopener noreferrer" class="info-card glass-item whatsapp-highlight magnetic-target">
+            <a href={whatsappHref} target="_blank" rel="noopener noreferrer" class="info-card glass-item whatsapp-highlight magnetic-target">
               <div class="icon-box whatsapp-icon">
                 <i class="fab fa-whatsapp"></i>
                 <span class="pulse-ring"></span>
@@ -51,7 +124,7 @@ const copiedLabel = i18n.contactCTA.copied;
                   <h5>WhatsApp</h5>
                   <span class="online-badge">Online</span>
                 </div>
-                <p>+229 97 27 90 01</p>
+                <p>{contactInfo.phone || dataUser.phone}</p>
                 <span class="chat-cta">Chat with me now <i class="fas fa-arrow-right"></i></span>
               </div>
             </a>
@@ -60,18 +133,21 @@ const copiedLabel = i18n.contactCTA.copied;
           <div class="social-connect" data-aos="fade-up" data-aos-delay="300">
             <h5 class="social-title">{i18n.contact.followMe}</h5>
             <div class="social-links">
-              <a href="https://github.com/ansetechnoapp" target="_blank" rel="noopener noreferrer" class="social-btn github magnetic-target" aria-label="GitHub">
-                <i class="fab fa-github"></i>
-              </a>
-              <a href="https://www.linkedin.com/in/anscod/" target="_blank" rel="noopener noreferrer" class="social-btn linkedin magnetic-target" aria-label="LinkedIn">
-                <i class="fab fa-linkedin-in"></i>
-              </a>
-              <a href="https://pinterest.com/anscoddesign" target="_blank" rel="noopener noreferrer" class="social-btn pinterest magnetic-target" aria-label="Pinterest">
-                <i class="fab fa-pinterest"></i>
-              </a>
-              <a href="https://instagram.com/anscod.otty" target="_blank" rel="noopener noreferrer" class="social-btn instagram magnetic-target" aria-label="Instagram">
-                <i class="fab fa-instagram"></i>
-              </a>
+              {
+                socialLinks.map((link) => {
+                  const platformKey = (link.platform || link.label).toLowerCase();
+                  const visual = socialVisualMap[platformKey] || {
+                    iconClass: "fas fa-link",
+                    buttonClass: "website",
+                  };
+
+                  return (
+                    <a href={link.href} target="_blank" rel="noopener noreferrer" class={`social-btn ${visual.buttonClass} magnetic-target`} aria-label={link.label}>
+                      <i class={visual.iconClass}></i>
+                    </a>
+                  );
+                })
+              }
             </div>
           </div>
         </div>
@@ -140,7 +216,7 @@ const copiedLabel = i18n.contactCTA.copied;
             </div>
             <div class="info-text">
               <h5>{i18n.contact.email}</h5>
-              <p>{dataUser.email}</p>
+              <p>{contactInfo.email || dataUser.email}</p>
             </div>
           </div>
 
@@ -150,26 +226,26 @@ const copiedLabel = i18n.contactCTA.copied;
             </div>
             <div class="info-text">
               <h5>{i18n.contact.location}</h5>
-              <p>{i18n.contact.basedIn}</p>
+              <p>{contactInfo.location || i18n.contact.basedIn}</p>
             </div>
           </div>
 
-          <div class="info-card glass-item">
+          <a href={websiteHref} target="_blank" rel="noopener noreferrer" class="info-card glass-item">
             <div class="icon-box website-icon">
               <i class="fas fa-globe"></i>
             </div>
             <div class="info-text">
               <h5>{i18n.contact.website}</h5>
-              <p>{dataUser.website}</p>
+              <p>{websiteLabel}</p>
             </div>
-          </div>
+          </a>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Floating WhatsApp Button -->
-  <a href="https://wa.me/22997279001" target="_blank" rel="noopener noreferrer" class="whatsapp-fab magnetic-target" aria-label="Chat on WhatsApp">
+  <a href={whatsappHref} target="_blank" rel="noopener noreferrer" class="whatsapp-fab magnetic-target" aria-label="Chat on WhatsApp">
     <i class="fab fa-whatsapp"></i>
     <span class="fab-tooltip">Chat with me</span>
     <div class="fab-glow"></div>

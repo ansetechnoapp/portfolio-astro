@@ -43,10 +43,6 @@ import About from "../components/About.astro";
 import Timeline from "../components/reactJS/TimelineExport";
 import timelineEvents from "../data/timelineEvents.json";
 // import HeroCounter from "../components/heroCounter.astro";
-// Content Fetching: List four most recent work projects
-const projects = (await getCollection("work"))
-  .sort((a, b) => b.data.number - a.data.number)
-  .slice(0, 4);
 
 // Full Astro Component Syntax:
 // https://docs.astro.build/core-concepts/astro-components/
@@ -54,20 +50,529 @@ const projects = (await getCollection("work"))
 import dataUser from "../data/User.json";
 import { getLangFromCookies, getTranslations } from "../i18n/index";
 
+type ApiSkillRow = {
+  name?: string | null;
+  category?: string | null;
+};
+
+type ApiProjectRow = {
+  id?: number | string;
+  slug?: string | null;
+  title?: string | null;
+  description?: string | null;
+  shortDescription?: string | null;
+  featuredImage?: string | null;
+  technologies?: unknown;
+  projectUrl?: string | null;
+  repositoryUrl?: string | null;
+  sortOrder?: number | null;
+  metadata?: unknown;
+};
+
+type ApiExperienceRow = {
+  entryType?: string | null;
+  title?: string | null;
+  company?: string | null;
+  description?: string | null;
+  location?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  companyUrl?: string | null;
+};
+
+type ApiProfileRow = {
+  profileType?: string | null;
+  fullName?: string | null;
+  companyName?: string | null;
+  headline?: string | null;
+  bio?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  websiteUrl?: string | null;
+  availableForHire?: boolean | null;
+  socialLinks?: Record<string, string> | null;
+  sectorData?: {
+    address?: {
+      city?: string | null;
+      country?: string | null;
+      rue?: string | null;
+      indicatif?: string | null;
+    } | null;
+    languages?: Record<string, unknown> | null;
+  } | null;
+};
+
+type PortfolioEnvelope = {
+  profile?: ApiProfileRow | null;
+  skills?: ApiSkillRow[];
+  projects?: ApiProjectRow[];
+  experiences?: ApiExperienceRow[];
+};
+
+type HeroSocialLink = {
+  label: string;
+  href: string;
+  icon: "twitter-logo" | "github-logo" | "youtube-logo" | "linkedin-logo" | "instagram-logo";
+};
+
+type ContactSocialLink = {
+  label: string;
+  href: string;
+  platform: string;
+};
+
+type SkillCard = {
+  title: string;
+  icon: "pencil-line" | "code" | "terminal-window" | "github-logo";
+  items: string[];
+  color: string;
+};
+
+type PreviewProject = {
+  id: string;
+  slug: string;
+  body: string;
+  collection: string;
+  data: {
+    title: string;
+    description: string;
+    tech: string[];
+    publishDate: Date;
+    tags: string[];
+    img: string;
+    img_alt?: string;
+    github?: string;
+    liveDemo?: string;
+    device?: string;
+    additionalImages?: Array<{
+      url: string;
+      alt?: string;
+    }>;
+  };
+  render: () => Promise<unknown>;
+};
+
+const PORTFOLIO_API_BASE_URL =
+  import.meta.env.PORTFOLIO_API_BASE_URL?.trim() || "https://api.zodev.live";
+const PORTFOLIO_API_ORIGIN =
+  import.meta.env.PORTFOLIO_API_ORIGIN?.trim() || "https://portfolio.zodev.live";
+const PORTFOLIO_API_TOKEN = import.meta.env.PORTFOLIO_API_TOKEN?.trim() || "";
+const PORTFOLIO_SHOWCASE_SLUG =
+  import.meta.env.PORTFOLIO_SHOWCASE_SLUG?.trim() || "main-portfolio";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeUrl(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^(https?:|mailto:|tel:)/i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("/")) return trimmed;
+  return `https://${trimmed.replace(/^\/+/, "")}`;
+}
+
+function normalizeImage(value?: string | null): string {
+  if (!value) return "/assets/social-preview.jpg";
+  const trimmed = value.trim();
+  if (!trimmed) return "/assets/social-preview.jpg";
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("/")) return trimmed;
+  return `/${trimmed.replace(/^\/+/, "")}`;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter(Boolean);
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function getSkillBuckets(skills: ApiSkillRow[]) {
+  const buckets = {
+    frameworks: [] as string[],
+    databases: [] as string[],
+    tools: [] as string[],
+    design: [] as string[],
+    maintenance: [] as string[],
+  };
+
+  for (const skill of skills) {
+    const name = skill.name?.trim();
+    if (!name) continue;
+    const category = skill.category?.trim().toLowerCase() || "tools";
+    if (category in buckets) {
+      buckets[category as keyof typeof buckets].push(name);
+    } else {
+      buckets.tools.push(name);
+    }
+  }
+
+  return Object.fromEntries(
+    Object.entries(buckets).map(([key, value]) => [key, uniqueStrings(value)]),
+  ) as typeof buckets;
+}
+
+function buildSkillCards(skills: ApiSkillRow[]): SkillCard[] {
+  const fallbackSkills = dataUser.skills;
+  const buckets =
+    skills.length > 0
+      ? getSkillBuckets(skills)
+      : {
+          frameworks: fallbackSkills.frameworks,
+          databases: fallbackSkills.databases,
+          tools: fallbackSkills.tools,
+          design: fallbackSkills.design,
+          maintenance: fallbackSkills.maintenance,
+        };
+
+  return [
+    {
+      title: "Design",
+      icon: "pencil-line",
+      items: buckets.design.length > 0 ? buckets.design : fallbackSkills.design,
+      color: "from-purple-500 to-indigo-500",
+    },
+    {
+      title: "Front-end",
+      icon: "code",
+      items:
+        buckets.frameworks.length > 0 ? buckets.frameworks : fallbackSkills.frameworks,
+      color: "from-blue-500 to-cyan-500",
+    },
+    {
+      title: "Back-end",
+      icon: "terminal-window",
+      items:
+        buckets.databases.length > 0 ? buckets.databases : fallbackSkills.databases,
+      color: "from-emerald-500 to-teal-500",
+    },
+    {
+      title: "Other",
+      icon: "github-logo",
+      items:
+        uniqueStrings([...buckets.tools, ...buckets.maintenance]).length > 0
+          ? uniqueStrings([...buckets.tools, ...buckets.maintenance])
+          : uniqueStrings([...fallbackSkills.tools, ...fallbackSkills.maintenance]),
+      color: "from-orange-500 to-red-500",
+    },
+  ];
+}
+
+function buildAboutSkills(skills: ApiSkillRow[]) {
+  const fallbackSkills = dataUser.skills;
+  const buckets =
+    skills.length > 0
+      ? getSkillBuckets(skills)
+      : {
+          frameworks: fallbackSkills.frameworks,
+          databases: fallbackSkills.databases,
+          tools: fallbackSkills.tools,
+          design: fallbackSkills.design,
+          maintenance: fallbackSkills.maintenance,
+        };
+  const mobileMatches = uniqueStrings(
+    [...buckets.frameworks, ...buckets.tools].filter((skill) =>
+      /react native|flutter|ios|android/i.test(skill),
+    ),
+  );
+
+  return {
+    webDev:
+      buckets.frameworks.length > 0
+        ? buckets.frameworks
+        : fallbackSkills.frameworks,
+    mobileDev:
+      mobileMatches.length > 0
+        ? mobileMatches
+        : ["React Native", "Flutter", "iOS/Android Development"],
+    other: uniqueStrings([
+      ...buckets.databases,
+      ...buckets.tools,
+      ...buckets.design,
+      ...buckets.maintenance,
+    ]),
+  };
+}
+
+function buildHeroSocialLinks(
+  socialLinks: Record<string, string>,
+): HeroSocialLink[] {
+  const iconMap: Record<string, HeroSocialLink["icon"] | undefined> = {
+    twitter: "twitter-logo",
+    x: "twitter-logo",
+    github: "github-logo",
+    youtube: "youtube-logo",
+    linkedin: "linkedin-logo",
+    instagram: "instagram-logo",
+  };
+  const labelMap: Record<string, string> = {
+    twitter: "Twitter",
+    x: "Twitter",
+    github: "GitHub",
+    youtube: "YouTube",
+    linkedin: "LinkedIn",
+    instagram: "Instagram",
+  };
+
+  const orderedPlatforms = ["twitter", "github", "youtube", "linkedin", "instagram"];
+
+  return orderedPlatforms
+    .map((platform) => {
+      const href = normalizeUrl(socialLinks[platform]);
+      const icon = iconMap[platform];
+      if (!href || !icon) return null;
+      return {
+        label: labelMap[platform],
+        href,
+        icon,
+      };
+    })
+    .filter((link): link is HeroSocialLink => Boolean(link));
+}
+
+function buildContactSocialLinks(
+  socialLinks: Record<string, string>,
+): ContactSocialLink[] {
+  const labelMap: Record<string, string> = {
+    github: "GitHub",
+    linkedin: "LinkedIn",
+    pinterest: "Pinterest",
+    instagram: "Instagram",
+    youtube: "YouTube",
+    twitter: "Twitter",
+    x: "Twitter",
+  };
+  const orderedPlatforms = [
+    "github",
+    "linkedin",
+    "pinterest",
+    "instagram",
+    "youtube",
+    "twitter",
+    "x",
+  ];
+
+  return orderedPlatforms
+    .map((platform) => {
+      const href = normalizeUrl(socialLinks[platform]);
+      if (!href) return null;
+      return {
+        label: labelMap[platform] || platform,
+        href,
+        platform,
+      };
+    })
+    .filter((link): link is ContactSocialLink => Boolean(link));
+}
+
+function normalizeTimelineEvent(row: ApiExperienceRow, index: number) {
+  const startYear = row.startDate
+    ? new Date(row.startDate).getFullYear()
+    : new Date().getFullYear() - index;
+  const category =
+    row.entryType?.toLowerCase() === "education"
+      ? "Formation"
+      : "Professionnelle";
+
+  return {
+    year: startYear,
+    title:
+      category === "Professionnelle"
+        ? row.company?.trim() || row.title?.trim() || "Experience"
+        : row.title?.trim() || row.company?.trim() || "Formation",
+    description:
+      category === "Professionnelle"
+        ? row.title?.trim() || ""
+        : row.company?.trim() || "",
+    details:
+      row.description?.trim() ||
+      row.location?.trim() ||
+      timelineEvents[index]?.details ||
+      "",
+    category,
+    image: timelineEvents[index]?.image,
+    link: normalizeUrl(row.companyUrl),
+  };
+}
+
+function normalizeProject(project: ApiProjectRow, index: number): PreviewProject {
+  const metadata = isRecord(project.metadata) ? project.metadata : {};
+  const additionalImages = Array.isArray(metadata.additionalImages)
+    ? metadata.additionalImages
+        .map((image) => {
+          if (!isRecord(image)) return null;
+          const url = normalizeImage(
+            typeof image.url === "string" ? image.url : undefined,
+          );
+          return {
+            url,
+            alt:
+              typeof image.alt === "string"
+                ? image.alt
+                : project.title?.trim() || "Project image",
+          };
+        })
+        .filter((image): image is { url: string; alt?: string } => Boolean(image))
+    : [];
+  const tech =
+    uniqueStrings([
+      ...toStringArray(project.technologies),
+      ...toStringArray(metadata.tech),
+    ]) || [];
+  const device =
+    typeof metadata.device === "string" && metadata.device.trim()
+      ? metadata.device.trim().toLowerCase()
+      : typeof metadata.projectType === "string" &&
+          /mobile/i.test(metadata.projectType)
+        ? "mobile"
+        : "web";
+
+  return {
+    id: String(project.id ?? project.slug ?? `api-project-${index}`),
+    slug: project.slug?.trim() || `api-project-${index}`,
+    body: project.description?.trim() || project.shortDescription?.trim() || "",
+    collection: "work",
+    data: {
+      title: project.title?.trim() || "Untitled project",
+      description:
+        project.shortDescription?.trim() ||
+        project.description?.trim() ||
+        "No description available.",
+      tech,
+      publishDate: new Date(),
+      tags: [],
+      img: normalizeImage(project.featuredImage),
+      img_alt: `${project.title?.trim() || "Project"} preview`,
+      github: normalizeUrl(project.repositoryUrl),
+      liveDemo: normalizeUrl(project.projectUrl),
+      device,
+      additionalImages,
+    },
+    render: async () => ({}),
+  };
+}
+
+async function fetchPortfolioData(): Promise<PortfolioEnvelope | null> {
+  const candidateBases = Array.from(
+    new Set([
+      PORTFOLIO_API_BASE_URL,
+      "http://127.0.0.1:3031",
+      "http://127.0.0.1:3013",
+      "https://api.zodev.live",
+    ]),
+  ).filter(Boolean);
+
+  for (const base of candidateBases) {
+    const url = `${base.replace(/\/+$/, "")}/api/portfolio/showcase/${PORTFOLIO_SHOWCASE_SLUG}`;
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          Origin: PORTFOLIO_API_ORIGIN,
+          ...(PORTFOLIO_API_TOKEN
+            ? { Authorization: `Bearer ${PORTFOLIO_API_TOKEN}` }
+            : {}),
+        },
+      });
+
+      if (!response.ok) continue;
+
+      const payload = (await response.json()) as {
+        data?: PortfolioEnvelope;
+      };
+
+      if (payload?.data) {
+        return payload.data;
+      }
+    } catch (error) {
+      console.warn(`Portfolio API unavailable for ${url}`, error);
+    }
+  }
+
+  return null;
+}
+
 const lang = getLangFromCookies(Astro.cookies);
 const i18n = getTranslations(lang);
+const [localProjects, apiPortfolio] = await Promise.all([
+  getCollection("work"),
+  fetchPortfolioData(),
+]);
+
+const apiProfile = apiPortfolio?.profile ?? null;
+const apiSkills = apiPortfolio?.skills ?? [];
+const apiExperiences = apiPortfolio?.experiences ?? [];
+const apiProjects = apiPortfolio?.projects ?? [];
+const fallbackFullName = `${dataUser.firstName} ${dataUser.lastName}`;
+const displayName =
+  apiProfile?.companyName?.trim() ||
+  apiProfile?.fullName?.trim() ||
+  fallbackFullName;
+const mergedSocialLinks = {
+  ...dataUser.socialMedia,
+  ...(apiProfile?.socialLinks ?? {}),
+};
+const heroSocialLinks = buildHeroSocialLinks(mergedSocialLinks);
+const contactSocialLinks = buildContactSocialLinks(mergedSocialLinks);
+const skillCards = buildSkillCards(apiSkills);
+const aboutSkills = buildAboutSkills(apiSkills);
+const profileLocation = apiProfile?.location?.trim() || dataUser.location;
+const profileCity =
+  apiProfile?.sectorData?.address?.city?.trim() ||
+  profileLocation.split(",")[0]?.trim() ||
+  dataUser.address.city;
+const profileCountry =
+  apiProfile?.sectorData?.address?.country?.trim() || dataUser.address.country;
+const profilePhone = apiProfile?.phone?.trim() || dataUser.phone;
+const profileEmail = apiProfile?.email?.trim() || dataUser.email;
+const profileWebsite =
+  normalizeUrl(apiProfile?.websiteUrl) || normalizeUrl(dataUser.website) || "";
+const profileBio = apiProfile?.bio?.trim() || dataUser.profile;
+const profileHeadline = apiProfile?.headline?.trim() || i18n.hero.tagline;
+const profileAvailability =
+  apiProfile?.availableForHire === false
+    ? i18n.about.availability
+    : i18n.contactCTA.available;
+const profileLanguages =
+  isRecord(apiProfile?.sectorData?.languages) &&
+  Object.keys(apiProfile?.sectorData?.languages || {}).length > 0
+    ? apiProfile?.sectorData?.languages
+    : dataUser.languages;
+const timelineData =
+  apiExperiences.length > 0
+    ? apiExperiences
+        .map((experience, index) => normalizeTimelineEvent(experience, index))
+        .sort((a, b) => b.year - a.year)
+    : timelineEvents;
+const projects =
+  apiProjects.length > 0
+    ? apiProjects
+        .slice()
+        .sort((a, b) => Number(b.sortOrder ?? 0) - Number(a.sortOrder ?? 0))
+        .map((project, index) => normalizeProject(project, index))
+        .slice(0, 4)
+    : localProjects
+        .sort((a, b) => b.data.number - a.data.number)
+        .slice(0, 4);
 
 // import FilterProjects from "../components/reactJS/FilterProjects";
 interface Props {
   heroTitle?: string | undefined;
 }
-const { heroTitle = `I am ${dataUser.firstName} ${dataUser.lastName}` } =
+const { heroTitle = `I am ${displayName}` } =
   Astro.props;
 ---
 
 <Layout
-  title={`${dataUser.firstName} ${dataUser.lastName} - ${i18n.meta.homeTitle}`}
-  description={i18n.meta.homeDescription.replace('{firstName}', dataUser.firstName).replace('{lastName}', dataUser.lastName).replace('{city}', dataUser.address.city)}
+  title={`${displayName} - ${i18n.meta.homeTitle}`}
+  description={i18n.meta.homeDescription.replace('{firstName}', displayName).replace('{lastName}', "").replace('{city}', profileCity)}
   image="/assets/social-preview.jpg"
   type="website"
 >
@@ -77,7 +582,7 @@ const { heroTitle = `I am ${dataUser.firstName} ${dataUser.lastName}` } =
   <section id="hero_home">
     <Hero
       title={heroTitle}
-      tagline={i18n.hero.tagline}
+      tagline={profileHeadline}
       tagline1={i18n.hero.tagline1}
       align="center"
     >
@@ -96,7 +601,7 @@ const { heroTitle = `I am ${dataUser.firstName} ${dataUser.lastName}` } =
               sizes="100px"
             />
             <img
-              alt={`${dataUser.firstName} ${dataUser.lastName}, ${i18n.meta.imgAlt.replace('{city}', dataUser.address.city).replace('{country}', dataUser.address.country)}`}
+              alt={`${displayName}, ${i18n.meta.imgAlt.replace('{city}', profileCity).replace('{country}', profileCountry)}`}
               width="100"
               height="100"
               src={Img1.fallback}
@@ -109,13 +614,13 @@ const { heroTitle = `I am ${dataUser.firstName} ${dataUser.lastName}` } =
 
       <!-- Social Media Navigation -->
       <div class="hero-social-modern" slot="social">
-        <HeroMediaSocialNav />
+        <HeroMediaSocialNav links={heroSocialLinks} />
       </div>
     </Hero>
   </section>
 
   <main class="wrapper stack gap-20 lg:gap-35">
-    <Skills client:visible />
+    <Skills client:visible skillsData={skillCards} />
   </main>
   <main id="about" class="wrapper stack gap-20 lg:gap-35">
     <About
@@ -127,15 +632,33 @@ const { heroTitle = `I am ${dataUser.firstName} ${dataUser.lastName}` } =
         srcsetAvif: Img2.srcsetAvif,
         srcsetWebp: Img2.srcsetWebp,
       }}
+      description={profileBio}
+      skills={aboutSkills}
+      languages={[
+        { name: i18n.languages.french, level: typeof profileLanguages.french === "string" ? profileLanguages.french : i18n.languages.native, percentage: 100 },
+        {
+          name: i18n.languages.english,
+          level: isRecord(profileLanguages.english)
+            ? Object.values(profileLanguages.english)
+                .filter((value) => typeof value === "string")
+                .join(" / ")
+            : typeof profileLanguages.english === "string"
+              ? profileLanguages.english
+              : i18n.languages.professional,
+          percentage: 70,
+        },
+      ]}
       contactInfo={{
-        city: dataUser.address.city,
-        street: dataUser.address.rue,
-        email: dataUser.email,
-        phone: dataUser.phone,
-        phonePrefix: dataUser.address.indicatif,
-        occupation: i18n.about.occupation,
-        availability: i18n.about.availability,
-        website: dataUser.website,
+        city: profileCity,
+        street: apiProfile?.sectorData?.address?.rue?.trim() || dataUser.address.rue,
+        email: profileEmail,
+        phone: profilePhone,
+        phonePrefix:
+          apiProfile?.sectorData?.address?.indicatif?.trim() ||
+          dataUser.address.indicatif,
+        occupation: profileHeadline || i18n.about.occupation,
+        availability: profileAvailability,
+        website: profileWebsite.replace(/^https?:\/\//, ""),
       }}
     />
   </main>
@@ -145,7 +668,7 @@ const { heroTitle = `I am ${dataUser.firstName} ${dataUser.lastName}` } =
         client:visible
         title={i18n.timeline.title}
         subtitle={i18n.timeline.subtitle}
-        events={timelineEvents}
+        events={timelineData}
       />
     </div>
   </section>
@@ -181,7 +704,16 @@ const { heroTitle = `I am ${dataUser.firstName} ${dataUser.lastName}` } =
     </section>
   </div>
 
-  <ContactCTA />
+  <ContactCTA
+    contactInfo={{
+      email: profileEmail,
+      phone: profilePhone,
+      website: profileWebsite.replace(/^https?:\/\//, ""),
+      location: profileLocation,
+    }}
+    socialLinks={contactSocialLinks}
+    availabilityLabel={profileAvailability}
+  />
 </Layout>
 
 <style>

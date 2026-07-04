@@ -8,11 +8,27 @@ import Hero from "../components/Hero.astro";
 import Grid from "../components/Grid.astro";
 import Contact from "../components/Contact.astro";
 import MenuLinkNav from "../components/menuLinkNav.astro";
+import {
+  fetchPortfolioAstroBootstrap,
+  toPortfolioPreviewProject,
+} from "../lib/zodback-astro-api";
 
-const projects = (await getCollection("work")).sort(
-  // (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf() filter by date
-  (a, b) => b.data.number - a.data.number
-);
+const [localProjects, astroBootstrap] = await Promise.all([
+  getCollection("work"),
+  fetchPortfolioAstroBootstrap(),
+]);
+const projects =
+  astroBootstrap?.projects && astroBootstrap.projects.length > 0
+    ? astroBootstrap.projects
+        .slice()
+        .sort(
+          (a, b) => Number(b.data.number ?? 0) - Number(a.data.number ?? 0),
+        )
+        .map((project) => toPortfolioPreviewProject(project))
+    : localProjects.sort(
+        // (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf() filter by date
+        (a, b) => b.data.number - a.data.number,
+      );
 import dataUser from "../data/User.json";
 import { getLangFromCookies, getTranslations } from "../i18n/index";
 const lang = getLangFromCookies(Astro.cookies);

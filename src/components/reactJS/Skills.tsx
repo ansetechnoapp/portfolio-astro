@@ -10,7 +10,11 @@ interface Skill {
     color: string;
 }
 
-const skillsData: Skill[] = [
+interface SkillsProps {
+    skillsData?: Skill[];
+}
+
+const defaultSkillsData: Skill[] = [
     {
         title: "Design",
         icon: "pencil-line",
@@ -107,7 +111,7 @@ const SpotlightCard: React.FC<{ skill: Skill; index: number }> = ({ skill, index
     );
 };
 
-const Skills: React.FC = () => {
+const Skills: React.FC<SkillsProps> = ({ skillsData = defaultSkillsData }) => {
     return (
         <section id="skills" className="relative py-24 px-6 md:px-12 overflow-hidden bg-transparent">
             {/* Background Ambient Decor - Subtler orbs for light mode */}
@@ -181,4 +185,3 @@ const Skills: React.FC = () => {
 };
 
 export default Skills;
-
