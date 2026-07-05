@@ -25,9 +25,6 @@ export default defineConfig({
         external: ['airtable'],
       },
     },
-    ssr: {
-      noExternal: ['@supabase/supabase-js']
-    }
   },
   image: {
     service: {

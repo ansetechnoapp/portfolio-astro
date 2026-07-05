@@ -119,11 +119,6 @@ const MenuLinks: React.FC<MenuLinksProps> = ({ namepage, pathname }) => {
         } else if (namepage === "widgetCss") {
             iconLinks = [
                 {
-                    icon: <RiCodeSSlashLine size={20} />,
-                    href: "/docs/",
-                    label: "Documentation"
-                },
-                {
                     icon: <RiHome5Line size={20} />,
                     href: "/#hero_home",
                     label: "Accueil"

@@ -75,8 +75,6 @@ async function checkEnvironmentVariables() {
     'PORTFOLIO_API_ORIGIN',
     'PORTFOLIO_API_TOKEN',
     'PORTFOLIO_SHOWCASE_SLUG',
-    'PUBLIC_SUPABASE_URL',
-    'PUBLIC_SUPABASE_ANON_KEY',
   ];
 
   let envContent = '';
@@ -111,10 +109,6 @@ async function checkEnvironmentVariables() {
 
   if (portfolioMode && portfolioMode !== 'api-required') {
     console.log(`⚠️  PORTFOLIO_DATA_MODE=${portfolioMode}. Utilisez "api-required" en preview/production si ZodBack est la source de vérité.`);
-  }
-
-  if (!detected.includes('PUBLIC_SUPABASE_URL') || !detected.includes('PUBLIC_SUPABASE_ANON_KEY')) {
-    console.log('ℹ️  Variables Supabase non détectées localement. Vérifiez-les seulement si vous utilisez encore les fonctionnalités concernées.');
   }
 
   console.log('✅ Environment variables check completed');

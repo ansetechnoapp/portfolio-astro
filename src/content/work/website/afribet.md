@@ -15,7 +15,6 @@ tags:
   - Branding
 tech:
   - Next JS
-  - supabase
   - PostgreSQL
   - Lucide
   - Webpack

@@ -47,10 +47,15 @@ Make sure these environment variables are set in your Vercel dashboard:
 3. Add the following variables:
 
 ```
-PUBLIC_SUPABASE_URL = https://cfnwwubinuizykgebksf.supabase.co
-PUBLIC_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmbnd3dWJpbnVpenlrZ2Via3NmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4Njc5NjcsImV4cCI6MjA2MzQ0Mzk2N30.i8gdrmXZvE-nDsGkgxp5Fsy3STF-mtJGYQHoMdaVpnk
+PORTFOLIO_DATA_MODE = api-required
+PORTFOLIO_API_BASE_URL = https://api.zodev.live
+PORTFOLIO_API_ORIGIN = https://my.zodev.live
+PORTFOLIO_API_TOKEN = <project token>
+PORTFOLIO_SHOWCASE_SLUG = main-portfolio
 NODE_ENV = production
 ```
+
+The legacy Supabase-backed `/docs` module has been archived and is no longer part of the active production surface.
 
 ### Step 4: Force Rebuild on Vercel
 To ensure Vercel picks up all changes:
