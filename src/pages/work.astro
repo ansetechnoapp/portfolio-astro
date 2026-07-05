@@ -9,14 +9,26 @@ import Grid from "../components/Grid.astro";
 import Contact from "../components/Contact.astro";
 import MenuLinkNav from "../components/menuLinkNav.astro";
 import {
+  applyPortfolioResponseHeaders,
+  getPortfolioDataMode,
+  isApiRequiredMode,
+} from "../lib/portfolio-data-source";
+import {
   fetchPortfolioAstroBootstrap,
   toPortfolioPreviewProject,
 } from "../lib/zodback-astro-api";
 
 const [localProjects, astroBootstrap] = await Promise.all([
   getCollection("work"),
-  fetchPortfolioAstroBootstrap(),
+  fetchPortfolioAstroBootstrap(Astro.url.origin),
 ]);
+const portfolioDataMode = getPortfolioDataMode();
+if (
+  isApiRequiredMode(portfolioDataMode) &&
+  (!astroBootstrap?.projects || astroBootstrap.projects.length === 0)
+) {
+  throw new Error("Portfolio API projects are required on /work in api-required mode");
+}
 const projects =
   astroBootstrap?.projects && astroBootstrap.projects.length > 0
     ? astroBootstrap.projects
@@ -29,6 +41,12 @@ const projects =
         // (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf() filter by date
         (a, b) => b.data.number - a.data.number,
       );
+applyPortfolioResponseHeaders(Astro.response.headers, {
+  source:
+    astroBootstrap?.projects && astroBootstrap.projects.length > 0 ? "api" : "local",
+  mode: portfolioDataMode,
+  requestOrigin: Astro.url.origin,
+});
 import dataUser from "../data/User.json";
 import { getLangFromCookies, getTranslations } from "../i18n/index";
 const lang = getLangFromCookies(Astro.cookies);

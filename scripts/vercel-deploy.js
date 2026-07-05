@@ -70,6 +70,7 @@ async function checkEnvironmentVariables() {
   console.log('\n🔍 Checking environment variables...');
 
   const recommendedVars = [
+    'PORTFOLIO_DATA_MODE',
     'PORTFOLIO_API_BASE_URL',
     'PORTFOLIO_API_ORIGIN',
     'PORTFOLIO_API_TOKEN',
@@ -95,13 +96,21 @@ async function checkEnvironmentVariables() {
     console.log(`✅ Variables detectées: ${detected.join(', ')}`);
   }
 
-  const missingPortfolioVars = ['PORTFOLIO_API_BASE_URL', 'PORTFOLIO_API_ORIGIN', 'PORTFOLIO_API_TOKEN'].filter(
+  const missingPortfolioVars = ['PORTFOLIO_DATA_MODE', 'PORTFOLIO_API_BASE_URL', 'PORTFOLIO_API_ORIGIN', 'PORTFOLIO_API_TOKEN'].filter(
     (varName) => !detected.includes(varName),
   );
 
   if (missingPortfolioVars.length > 0) {
     console.log(`⚠️  Variables portfolio non détectées: ${missingPortfolioVars.join(', ')}`);
     console.log('Assurez-vous qu’elles sont configurées dans Vercel pour que le portfolio charge les données ZodBack en production.');
+  }
+
+  const portfolioModeMatch = envContent.match(/^PORTFOLIO_DATA_MODE=(.+)$/m);
+  const portfolioMode =
+    portfolioModeMatch?.[1]?.trim() || process.env.PORTFOLIO_DATA_MODE || '';
+
+  if (portfolioMode && portfolioMode !== 'api-required') {
+    console.log(`⚠️  PORTFOLIO_DATA_MODE=${portfolioMode}. Utilisez "api-required" en preview/production si ZodBack est la source de vérité.`);
   }
 
   if (!detected.includes('PUBLIC_SUPABASE_URL') || !detected.includes('PUBLIC_SUPABASE_ANON_KEY')) {

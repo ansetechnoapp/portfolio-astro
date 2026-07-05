@@ -1,97 +1,22 @@
-type AstroBootstrapProject = {
-  id: string;
-  slug: string;
-  bodyMarkdown?: string;
-  data: {
-    title: string;
-    description: string;
-    tech?: string[];
-    publishDate?: string | null;
-    number?: number | null;
-    tags?: string[];
-    img?: string;
-    img_alt?: string | null;
-    github?: string | null;
-    liveDemo?: string | null;
-    device?: string | null;
-    client?: string | null;
-    services?: string[];
-    projectType?: string | null;
-    duration?: string | null;
-    challenge?: string | null;
-    solution?: string | null;
-    additionalImages?: Array<{
-      url: string;
-      alt?: string;
-      caption?: string;
-    }>;
-    features?: Array<Record<string, unknown>>;
-    demoVideo?: Record<string, unknown> | null;
-  };
-};
+import {
+  fetchPortfolioApiData,
+  getPortfolioRuntimeConfig,
+} from "./portfolio-data-source";
+import type {
+  AstroBootstrapPayload,
+  AstroBootstrapProject,
+} from "./portfolio-types";
 
-type AstroBootstrapPayload = {
-  user?: Record<string, unknown>;
-  timelineEvents?: Array<Record<string, unknown>>;
-  projects?: AstroBootstrapProject[];
-};
+export async function fetchPortfolioAstroBootstrap(
+  requestOrigin?: string,
+): Promise<AstroBootstrapPayload | null> {
+  const config = getPortfolioRuntimeConfig(requestOrigin);
+  const result = await fetchPortfolioApiData<AstroBootstrapPayload>({
+    path: `/api/portfolio/astro/${config.showcaseSlug}/bootstrap`,
+    requestOrigin,
+  });
 
-const PORTFOLIO_API_BASE_URL =
-  import.meta.env.PORTFOLIO_API_BASE_URL?.trim() || "https://api.zodev.live";
-const PORTFOLIO_API_ORIGIN =
-  import.meta.env.PORTFOLIO_API_ORIGIN?.trim() || "https://portfolio.zodev.live";
-const PORTFOLIO_API_TOKEN = import.meta.env.PORTFOLIO_API_TOKEN?.trim() || "";
-const PORTFOLIO_SHOWCASE_SLUG =
-  import.meta.env.PORTFOLIO_SHOWCASE_SLUG?.trim() || "main-portfolio";
-
-function joinUrl(base: string, path: string) {
-  const normalizedBase = base.replace(/\/+$/, "");
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${normalizedBase}${normalizedPath}`;
-}
-
-export async function fetchPortfolioAstroBootstrap(): Promise<AstroBootstrapPayload | null> {
-  const candidateBases = Array.from(
-    new Set([
-      PORTFOLIO_API_BASE_URL,
-      "http://127.0.0.1:3031",
-      "http://127.0.0.1:3013",
-      "https://api.zodev.live",
-    ]),
-  ).filter(Boolean);
-
-  for (const base of candidateBases) {
-    const url = joinUrl(
-      base,
-      `/api/portfolio/astro/${PORTFOLIO_SHOWCASE_SLUG}/bootstrap`,
-    );
-
-    try {
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/json",
-          Origin: PORTFOLIO_API_ORIGIN,
-          ...(PORTFOLIO_API_TOKEN
-            ? { Authorization: `Bearer ${PORTFOLIO_API_TOKEN}` }
-            : {}),
-        },
-      });
-
-      if (!response.ok) continue;
-
-      const payload = (await response.json()) as {
-        data?: AstroBootstrapPayload;
-      };
-
-      if (payload?.data) {
-        return payload.data;
-      }
-    } catch (error) {
-      console.warn(`Astro bootstrap API unavailable for ${url}`, error);
-    }
-  }
-
-  return null;
+  return result.data;
 }
 
 export function toPortfolioPreviewProject(project: AstroBootstrapProject) {

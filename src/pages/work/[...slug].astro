@@ -13,17 +13,29 @@ import Pill from "../../components/reactJS/Pill";
 import TabbedInterface from "../../components/reactJS/TabbedInterface";
 import ProjectFeatures from "../../components/reactJS/ProjectFeatures";
 import ImageGallery from "../../components/reactJS/ImageGallery";
+import {
+  applyPortfolioResponseHeaders,
+  getPortfolioDataMode,
+  isApiRequiredMode,
+} from "../../lib/portfolio-data-source";
 import { fetchPortfolioAstroBootstrap } from "../../lib/zodback-astro-api";
 
 const routeSlug = String(Astro.params.slug || "");
 const [localEntries, astroBootstrap] = await Promise.all([
   getCollection("work"),
-  fetchPortfolioAstroBootstrap(),
+  fetchPortfolioAstroBootstrap(Astro.url.origin),
 ]);
 const localEntry = localEntries.find((entry) => entry.slug === routeSlug);
 const apiProject = astroBootstrap?.projects?.find(
   (project) => project.slug === routeSlug,
 );
+const portfolioDataMode = getPortfolioDataMode();
+
+if (isApiRequiredMode(portfolioDataMode) && !apiProject) {
+  throw new Error(
+    `Portfolio API project is required for slug ${routeSlug} in api-required mode`,
+  );
+}
 
 if (!apiProject && !localEntry) {
   throw new Error(`Project not found for slug: ${routeSlug}`);
@@ -57,6 +69,11 @@ const sourceProject = apiProject
       },
     }
   : localEntry!;
+applyPortfolioResponseHeaders(Astro.response.headers, {
+  source: apiProject ? "api" : "local",
+  mode: portfolioDataMode,
+  requestOrigin: Astro.url.origin,
+});
 
 const localRendered = localEntry ? await localEntry.render() : null;
 const Content = localRendered?.Content;

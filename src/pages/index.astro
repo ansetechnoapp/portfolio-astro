@@ -49,6 +49,13 @@ import timelineEvents from "../data/timelineEvents.json";
 
 import dataUser from "../data/User.json";
 import { getLangFromCookies, getTranslations } from "../i18n/index";
+import {
+  applyPortfolioResponseHeaders,
+  fetchPortfolioApiData,
+  getPortfolioDataMode,
+  getPortfolioRuntimeConfig,
+  isApiRequiredMode,
+} from "../lib/portfolio-data-source";
 
 type ApiSkillRow = {
   name?: string | null;
@@ -152,14 +159,6 @@ type PreviewProject = {
   };
   render: () => Promise<unknown>;
 };
-
-const PORTFOLIO_API_BASE_URL =
-  import.meta.env.PORTFOLIO_API_BASE_URL?.trim() || "https://api.zodev.live";
-const PORTFOLIO_API_ORIGIN =
-  import.meta.env.PORTFOLIO_API_ORIGIN?.trim() || "https://portfolio.zodev.live";
-const PORTFOLIO_API_TOKEN = import.meta.env.PORTFOLIO_API_TOKEN?.trim() || "";
-const PORTFOLIO_SHOWCASE_SLUG =
-  import.meta.env.PORTFOLIO_SHOWCASE_SLUG?.trim() || "main-portfolio";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -458,58 +457,39 @@ function normalizeProject(project: ApiProjectRow, index: number): PreviewProject
   };
 }
 
-async function fetchPortfolioData(): Promise<PortfolioEnvelope | null> {
-  const candidateBases = Array.from(
-    new Set([
-      PORTFOLIO_API_BASE_URL,
-      "http://127.0.0.1:3031",
-      "http://127.0.0.1:3013",
-      "https://api.zodev.live",
-    ]),
-  ).filter(Boolean);
-
-  for (const base of candidateBases) {
-    const url = `${base.replace(/\/+$/, "")}/api/portfolio/showcase/${PORTFOLIO_SHOWCASE_SLUG}`;
-
-    try {
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/json",
-          Origin: PORTFOLIO_API_ORIGIN,
-          ...(PORTFOLIO_API_TOKEN
-            ? { Authorization: `Bearer ${PORTFOLIO_API_TOKEN}` }
-            : {}),
-        },
-      });
-
-      if (!response.ok) continue;
-
-      const payload = (await response.json()) as {
-        data?: PortfolioEnvelope;
-      };
-
-      if (payload?.data) {
-        return payload.data;
-      }
-    } catch (error) {
-      console.warn(`Portfolio API unavailable for ${url}`, error);
-    }
-  }
-
-  return null;
-}
-
 const lang = getLangFromCookies(Astro.cookies);
 const i18n = getTranslations(lang);
-const [localProjects, apiPortfolio] = await Promise.all([
+const portfolioRuntimeConfig = getPortfolioRuntimeConfig(Astro.url.origin);
+const [localProjects, portfolioApiResult] = await Promise.all([
   getCollection("work"),
-  fetchPortfolioData(),
+  fetchPortfolioApiData<PortfolioEnvelope>({
+    path: `/api/portfolio/showcase/${portfolioRuntimeConfig.showcaseSlug}`,
+    requestOrigin: Astro.url.origin,
+  }),
 ]);
+const apiPortfolio = portfolioApiResult.data;
+const portfolioDataMode = getPortfolioDataMode();
 
 const apiProfile = apiPortfolio?.profile ?? null;
 const apiSkills = apiPortfolio?.skills ?? [];
 const apiExperiences = apiPortfolio?.experiences ?? [];
 const apiProjects = apiPortfolio?.projects ?? [];
+if (isApiRequiredMode(portfolioDataMode)) {
+  if (!apiProfile) {
+    throw new Error("Portfolio API profile is required on homepage in api-required mode");
+  }
+  if (apiSkills.length === 0) {
+    throw new Error("Portfolio API skills are required on homepage in api-required mode");
+  }
+  if (apiExperiences.length === 0) {
+    throw new Error(
+      "Portfolio API experiences are required on homepage in api-required mode",
+    );
+  }
+  if (apiProjects.length === 0) {
+    throw new Error("Portfolio API projects are required on homepage in api-required mode");
+  }
+}
 const fallbackFullName = `${dataUser.firstName} ${dataUser.lastName}`;
 const displayName =
   apiProfile?.companyName?.trim() ||
@@ -561,6 +541,12 @@ const projects =
     : localProjects
         .sort((a, b) => b.data.number - a.data.number)
         .slice(0, 4);
+applyPortfolioResponseHeaders(Astro.response.headers, {
+  source: apiPortfolio ? "api" : "local",
+  mode: portfolioDataMode,
+  endpoint: portfolioApiResult.endpoint,
+  requestOrigin: portfolioApiResult.requestOrigin,
+});
 
 // import FilterProjects from "../components/reactJS/FilterProjects";
 interface Props {
