@@ -69,12 +69,16 @@ export function getPortfolioRuntimeConfig(requestOrigin?: string) {
     process.env.PORTFOLIO_SHOWCASE_SLUG?.trim() ||
     "main-portfolio";
   const candidateBases = Array.from(
-    new Set([
-      apiBaseUrl,
-      "http://127.0.0.1:3031",
-      "http://127.0.0.1:3013",
-      DEFAULT_API_BASE_URL,
-    ]),
+    new Set(
+      mode === "api-required"
+        ? [apiBaseUrl, DEFAULT_API_BASE_URL]
+        : [
+            apiBaseUrl,
+            "http://127.0.0.1:3031",
+            "http://127.0.0.1:3013",
+            DEFAULT_API_BASE_URL,
+          ],
+    ),
   ).filter(Boolean);
 
   return {
@@ -133,7 +137,12 @@ export async function fetchPortfolioApiData<T>({
       });
 
       if (!response.ok) {
-        lastError = new Error(`HTTP ${response.status} for ${url}`);
+        const bodyPreview = (await response.text()).slice(0, 160).replace(/\s+/g, " ");
+        lastError = new Error(
+          `HTTP ${response.status} for ${url}${
+            bodyPreview ? `: ${bodyPreview}` : ""
+          }`,
+        );
         continue;
       }
 
