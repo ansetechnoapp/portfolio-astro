@@ -26,6 +26,37 @@ function formatError(error: unknown): string {
   return String(error);
 }
 
+function getErrorMetadata(error: unknown) {
+  if (!(error instanceof Error)) {
+    return {
+      message: String(error),
+    };
+  }
+
+  const withCause = error as Error & {
+    cause?: {
+      code?: string;
+      errno?: string | number;
+      syscall?: string;
+      hostname?: string;
+      address?: string;
+      port?: number;
+      message?: string;
+    };
+  };
+
+  return {
+    message: error.message,
+    causeMessage: withCause.cause?.message ?? null,
+    code: withCause.cause?.code ?? null,
+    errno: withCause.cause?.errno ?? null,
+    syscall: withCause.cause?.syscall ?? null,
+    hostname: withCause.cause?.hostname ?? null,
+    address: withCause.cause?.address ?? null,
+    port: withCause.cause?.port ?? null,
+  };
+}
+
 function findFirstFunctionPath(
   value: unknown,
   currentPath = "root",
@@ -125,6 +156,7 @@ export const GET: APIRoute = async ({ url }) => {
     diagnostics.showcaseFetch = {
       success: false,
       error: formatError(error),
+      details: getErrorMetadata(error),
     };
   }
 
@@ -166,8 +198,47 @@ export const GET: APIRoute = async ({ url }) => {
     diagnostics.bootstrapFetch = {
       success: false,
       error: formatError(error),
+      details: getErrorMetadata(error),
     };
   }
+
+  diagnostics.candidateFetches = {
+    success: true,
+    details: {
+      candidates: await Promise.all(
+        runtimeConfig.candidateBases.map(async (base) => {
+          const urlValue = `${base.replace(/\/+$/, "")}/api/portfolio/showcase/${runtimeConfig.showcaseSlug}`;
+
+          try {
+            const response = await fetch(urlValue, {
+              headers: {
+                Accept: "application/json",
+                Origin: requestOrigin,
+                ...(runtimeConfig.apiToken
+                  ? { Authorization: `Bearer ${runtimeConfig.apiToken}` }
+                  : {}),
+              },
+            });
+
+            const body = await response.text();
+
+            return {
+              base,
+              ok: response.ok,
+              status: response.status,
+              bodyPreview: body.slice(0, 120),
+            };
+          } catch (error) {
+            return {
+              base,
+              ok: false,
+              error: getErrorMetadata(error),
+            };
+          }
+        }),
+      ),
+    },
+  };
 
   return new Response(
     JSON.stringify(
