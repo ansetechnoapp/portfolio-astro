@@ -51,8 +51,13 @@ export function isLocalOnlyMode(mode = getPortfolioDataMode()): boolean {
 export function getPortfolioRuntimeConfig(requestOrigin?: string) {
   const mode = getPortfolioDataMode();
   const apiBaseUrl =
-    import.meta.env.PORTFOLIO_API_BASE_URL?.trim() || DEFAULT_API_BASE_URL;
-  const apiToken = import.meta.env.PORTFOLIO_API_TOKEN?.trim() || "";
+    import.meta.env.PORTFOLIO_API_BASE_URL?.trim() ||
+    process.env.PORTFOLIO_API_BASE_URL?.trim() ||
+    DEFAULT_API_BASE_URL;
+  const apiToken =
+    import.meta.env.PORTFOLIO_API_TOKEN?.trim() ||
+    process.env.PORTFOLIO_API_TOKEN?.trim() ||
+    "";
   const requestOriginValue = normalizeOrigin(
     requestOrigin ||
       import.meta.env.PORTFOLIO_API_ORIGIN ||
@@ -60,7 +65,9 @@ export function getPortfolioRuntimeConfig(requestOrigin?: string) {
       DEFAULT_REQUEST_ORIGIN,
   );
   const showcaseSlug =
-    import.meta.env.PORTFOLIO_SHOWCASE_SLUG?.trim() || "main-portfolio";
+    import.meta.env.PORTFOLIO_SHOWCASE_SLUG?.trim() ||
+    process.env.PORTFOLIO_SHOWCASE_SLUG?.trim() ||
+    "main-portfolio";
   const candidateBases = Array.from(
     new Set([
       apiBaseUrl,
