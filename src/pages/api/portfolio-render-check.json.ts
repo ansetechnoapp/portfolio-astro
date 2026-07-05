@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
-import { stringify } from "devalue";
 import {
   fetchPortfolioApiData,
   getPortfolioDataMode,
@@ -25,6 +24,41 @@ function formatError(error: unknown): string {
   }
 
   return String(error);
+}
+
+function findFirstFunctionPath(
+  value: unknown,
+  currentPath = "root",
+  seen = new WeakSet<object>(),
+): string | null {
+  if (typeof value === "function") {
+    return currentPath;
+  }
+
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  if (seen.has(value)) {
+    return null;
+  }
+
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    for (const [index, entry] of value.entries()) {
+      const match = findFirstFunctionPath(entry, `${currentPath}[${index}]`, seen);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  for (const [key, entry] of Object.entries(value)) {
+    const match = findFirstFunctionPath(entry, `${currentPath}.${key}`, seen);
+    if (match) return match;
+  }
+
+  return null;
 }
 
 export const GET: APIRoute = async ({ url }) => {
@@ -107,14 +141,18 @@ export const GET: APIRoute = async ({ url }) => {
     if (bootstrap?.projects?.[0]) {
       try {
         const previewProject = toPortfolioPreviewProject(bootstrap.projects[0]);
-        const serialized = stringify({
+        const firstFunctionPath = findFirstFunctionPath({
+          previewProject,
+        });
+        const json = JSON.stringify({
           previewProject,
         });
         diagnostics.previewSerialization = {
           success: true,
           details: {
-            serializedLength: serialized.length,
+            jsonLength: json?.length ?? 0,
             hasRenderFunction: typeof previewProject.render === "function",
+            firstFunctionPath,
           },
         };
       } catch (error) {
