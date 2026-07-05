@@ -237,6 +237,34 @@ export const GET: APIRoute = async ({ url }) => {
           }
         }),
       ),
+      apiBaseWithoutAuth: await (async () => {
+        const base = runtimeConfig.apiBaseUrl;
+        const urlValue = `${base.replace(/\/+$/, "")}/api/portfolio/showcase/${runtimeConfig.showcaseSlug}`;
+
+        try {
+          const response = await fetch(urlValue, {
+            headers: {
+              Accept: "application/json",
+              Origin: requestOrigin,
+            },
+          });
+
+          const body = await response.text();
+
+          return {
+            base,
+            ok: response.ok,
+            status: response.status,
+            bodyPreview: body.slice(0, 120),
+          };
+        } catch (error) {
+          return {
+            base,
+            ok: false,
+            error: getErrorMetadata(error),
+          };
+        }
+      })(),
     },
   };
 
