@@ -46,6 +46,7 @@ const {
   writePortfolioSnapshot,
 } = await import("./portfolio-snapshot");
 const {
+  buildPortfolioRequestHeaders,
   fetchPortfolioApiData,
   getPortfolioSnapshotEndpoint,
 } = await import("./portfolio-data-source");
@@ -207,9 +208,34 @@ describe("portfolio-data-source", () => {
       "https://api.example.test/api/portfolio/astro/main-portfolio/bootstrap",
     );
     expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0]?.headers).toEqual({
+      Accept: "application/json",
+      Authorization: "Bearer portfolio-token",
+    });
     expect(getPortfolioSnapshotEndpoint("main-portfolio")).toBe(
       "snapshot:portfolio-snapshots/main-portfolio/latest.json",
     );
+  });
+
+  test("omits Origin on tokenized server-to-server requests", () => {
+    expect(
+      buildPortfolioRequestHeaders({
+        apiToken: "portfolio-token",
+        requestOrigin: "https://my.zodev.live",
+      }),
+    ).toEqual({
+      Accept: "application/json",
+      Authorization: "Bearer portfolio-token",
+    });
+
+    expect(
+      buildPortfolioRequestHeaders({
+        requestOrigin: "https://my.zodev.live",
+      }),
+    ).toEqual({
+      Accept: "application/json",
+      Origin: "https://my.zodev.live",
+    });
   });
 
   test("falls back to the last known good snapshot when every API base fails", async () => {

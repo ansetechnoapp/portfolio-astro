@@ -1,5 +1,8 @@
 import type { APIRoute } from 'astro';
-import { getPortfolioRuntimeConfig } from '../../lib/portfolio-data-source';
+import {
+  buildPortfolioRequestHeaders,
+  getPortfolioRuntimeConfig,
+} from '../../lib/portfolio-data-source';
 import { writePortfolioSnapshot } from '../../lib/portfolio-snapshot';
 import type { PortfolioSyncRequest } from '../../lib/portfolio-types';
 
@@ -108,11 +111,10 @@ export const POST: APIRoute = async ({ request, url }) => {
     );
   }
 
-  const authHeaders = {
-    Accept: 'application/json',
-    Origin: config.requestOrigin,
-    Authorization: `Bearer ${config.apiToken}`,
-  };
+  const authHeaders = buildPortfolioRequestHeaders({
+    apiToken: config.apiToken,
+    requestOrigin: config.requestOrigin,
+  });
 
   let lastError: string | null = null;
 

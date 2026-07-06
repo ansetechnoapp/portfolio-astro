@@ -110,6 +110,26 @@ function joinUrl(base: string, path: string) {
 
 const API_TIMEOUT = 2500; // 2.5 seconds before fallback to snapshot as per requirements
 
+function buildPortfolioRequestHeaders({
+  apiToken,
+  requestOrigin,
+}: {
+  apiToken?: string;
+  requestOrigin: string;
+}) {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  };
+
+  if (apiToken) {
+    headers.Authorization = `Bearer ${apiToken}`;
+    return headers;
+  }
+
+  headers.Origin = requestOrigin;
+  return headers;
+}
+
 async function fetchWithTimeout(url: string, options: RequestInit, timeout: number): Promise<Response> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -157,13 +177,10 @@ export async function fetchPortfolioApiData<T>({
 
     try {
       const response = await fetchWithTimeout(url, {
-        headers: {
-          Accept: "application/json",
-          Origin: config.requestOrigin,
-          ...(config.apiToken
-            ? { Authorization: `Bearer ${config.apiToken}` }
-            : {}),
-        },
+        headers: buildPortfolioRequestHeaders({
+          apiToken: config.apiToken,
+          requestOrigin: config.requestOrigin,
+        }),
       }, API_TIMEOUT);
 
       if (!response.ok) {
@@ -270,3 +287,5 @@ export function applyPortfolioResponseHeaders(
 export function getPortfolioSnapshotEndpoint(showcaseSlug: string) {
   return `snapshot:${getSnapshotBlobKey(showcaseSlug)}`;
 }
+
+export { buildPortfolioRequestHeaders };

@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 import {
+  buildPortfolioRequestHeaders,
   fetchPortfolioApiData,
   getPortfolioDataMode,
   getPortfolioRuntimeConfig,
@@ -215,13 +216,10 @@ export const GET: APIRoute = async ({ url }) => {
 
           try {
             const response = await fetch(urlValue, {
-              headers: {
-                Accept: "application/json",
-                Origin: requestOrigin,
-                ...(runtimeConfig.apiToken
-                  ? { Authorization: `Bearer ${runtimeConfig.apiToken}` }
-                  : {}),
-              },
+              headers: buildPortfolioRequestHeaders({
+                apiToken: runtimeConfig.apiToken,
+                requestOrigin,
+              }),
             });
 
             const body = await response.text();
@@ -247,10 +245,9 @@ export const GET: APIRoute = async ({ url }) => {
 
         try {
           const response = await fetch(urlValue, {
-            headers: {
-              Accept: "application/json",
-              Origin: requestOrigin,
-            },
+            headers: buildPortfolioRequestHeaders({
+              requestOrigin,
+            }),
           });
 
           const body = await response.text();
