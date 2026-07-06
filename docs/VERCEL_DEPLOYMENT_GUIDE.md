@@ -62,6 +62,8 @@ Snapshot fallback notes:
 - `BLOB_READ_WRITE_TOKEN` is only needed outside Vercel or for local/manual access paths; Vercel deployments use OIDC by default
 - Backend-only values live outside Vercel: `PORTFOLIO_SNAPSHOT_WEBHOOK_URL`, `PORTFOLIO_SNAPSHOT_STARTUP_RECONCILE`, `PORTFOLIO_SNAPSHOT_SHOWCASE_SLUG`
 - GitHub Actions should also receive `PORTFOLIO_SNAPSHOT_SYNC_URL` and the same shared secret
+- SSR fetches that already use `PORTFOLIO_API_TOKEN` must omit `Origin`; the token itself is the trust boundary for the backend call
+- During a temporary backend outage, the site should stay live via the Blob snapshot and expose `x-portfolio-data-source: snapshot`
 
 The legacy Supabase-backed `/docs` module has been archived and is no longer part of the active production surface.
 
@@ -127,6 +129,8 @@ After deployment, verify:
 2. Background images display properly
 3. All functionality works as expected
 4. No console errors in browser dev tools
+5. `curl -I https://my.zodev.live/work` returns `200`
+6. `curl -s https://my.zodev.live/api/portfolio-runtime.json` reports the expected commit and `snapshotAvailable`
 
 ## Next Steps
 

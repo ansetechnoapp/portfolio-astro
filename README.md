@@ -2,6 +2,8 @@
 
 Un portfolio moderne construit avec Astro, featuring un système d'optimisation d'images automatique et performant.
 
+Pour les regles d'exploitation et les details d'integration ZodBack/Vercel, voir [`AGENTS.md`](AGENTS.md).
+
 ## ✨ Fonctionnalités
 
 - 🖼️ **Optimisation d'images automatique** lors du build
@@ -37,18 +39,18 @@ To learn more about the folder structure of an Astro project, refer to [our guid
    ```bash
    git clone <repository-url>
    cd portfolio
-   pnpm install
+   bun install
    ```
 
 2. **Développement :**
    ```bash
-   pnpm dev
+   bun run dev
    ```
    Ouvre `http://localhost:4321`
 
 3. **Build et déploiement :**
    ```bash
-   pnpm build  # Optimise automatiquement les images
+   bun run build  # Optimise automatiquement les images
    ```
 
 ## 🖼️ Optimisation d'Images Automatique
@@ -81,14 +83,14 @@ import OptimizedImage from '../components/OptimizedImage.astro';
 
 | Commande                  | Action                                           |
 | :------------------------ | :----------------------------------------------- |
-| `pnpm install`            | Installe les dépendances                        |
-| `pnpm dev`                | Démarre le serveur de développement             |
-| `pnpm build`              | Build + optimisation automatique des images     |
-| `pnpm build:only`         | Build sans optimisation d'images                |
-| `pnpm preview`            | Prévisualise le build localement                |
-| `pnpm optimize-images`    | Optimise manuellement les nouvelles images      |
-| `pnpm cleanup-images`     | Organise les images existantes                  |
-| `pnpm setup-images`       | Nettoyage + optimisation complète               |
+| `bun install`             | Installe les dépendances                        |
+| `bun run dev`             | Démarre le serveur de développement             |
+| `bun run build`           | Build + optimisation automatique des images     |
+| `bun run build:only`      | Build sans optimisation d'images                |
+| `bun run preview`         | Prévisualise le build localement                |
+| `bun run optimize-images` | Optimise manuellement les nouvelles images      |
+| `bun run cleanup-images`  | Organise les images existantes                  |
+| `bun run setup-images`    | Nettoyage + optimisation complète               |
 
 ## 👀 Want to learn more?
 
