@@ -1,6 +1,7 @@
 import {
   fetchPortfolioApiData,
   getPortfolioRuntimeConfig,
+  type PortfolioFetchResult,
 } from "./portfolio-data-source";
 import type {
   AstroBootstrapPayload,
@@ -9,14 +10,12 @@ import type {
 
 export async function fetchPortfolioAstroBootstrap(
   requestOrigin?: string,
-): Promise<AstroBootstrapPayload | null> {
+): Promise<PortfolioFetchResult<AstroBootstrapPayload>> {
   const config = getPortfolioRuntimeConfig(requestOrigin);
-  const result = await fetchPortfolioApiData<AstroBootstrapPayload>({
+  return await fetchPortfolioApiData<AstroBootstrapPayload>({
     path: `/api/portfolio/astro/${config.showcaseSlug}/bootstrap`,
     requestOrigin,
   });
-
-  return result.data;
 }
 
 export function toPortfolioPreviewProject(project: AstroBootstrapProject) {

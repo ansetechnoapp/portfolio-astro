@@ -52,8 +52,16 @@ PORTFOLIO_API_BASE_URL = https://integrations-api.zodev.live
 PORTFOLIO_API_ORIGIN = https://my.zodev.live
 PORTFOLIO_API_TOKEN = <project token>
 PORTFOLIO_SHOWCASE_SLUG = main-portfolio
+PORTFOLIO_SNAPSHOT_SYNC_SECRET = <shared secret>
 NODE_ENV = production
 ```
+
+Snapshot fallback notes:
+- `PORTFOLIO_SNAPSHOT_SYNC_SECRET` must match the backend secret used by `POST /api/portfolio-sync.json`
+- `BLOB_STORE_ID` is created by Vercel when the Blob store is connected to the project; leave it in place
+- `BLOB_READ_WRITE_TOKEN` is only needed outside Vercel or for local/manual access paths; Vercel deployments use OIDC by default
+- Backend-only values live outside Vercel: `PORTFOLIO_SNAPSHOT_WEBHOOK_URL`, `PORTFOLIO_SNAPSHOT_STARTUP_RECONCILE`, `PORTFOLIO_SNAPSHOT_SHOWCASE_SLUG`
+- GitHub Actions should also receive `PORTFOLIO_SNAPSHOT_SYNC_URL` and the same shared secret
 
 The legacy Supabase-backed `/docs` module has been archived and is no longer part of the active production surface.
 

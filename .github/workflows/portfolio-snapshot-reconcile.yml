@@ -1,0 +1,24 @@
+name: Portfolio Snapshot Reconcile
+run-name: Reconcile portfolio snapshot from ZodBack API
+
+# Run every 5 minutes as per requirements
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  # Also allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  reconcile-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger portfolio snapshot sync
+        run: |
+          curl -X POST "${{ secrets.PORTFOLIO_SNAPSHOT_SYNC_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "x-portfolio-sync-secret: ${{ secrets.PORTFOLIO_SNAPSHOT_SYNC_SECRET }}" \
+            -d '{"reason": "scheduled-reconcile", "showcaseSlug": "main-portfolio"}' \
+            --connect-timeout 10 \
+            --max-time 30
+        env:
+          DEBUG: 'curl*'

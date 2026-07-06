@@ -75,6 +75,7 @@ async function checkEnvironmentVariables() {
     'PORTFOLIO_API_ORIGIN',
     'PORTFOLIO_API_TOKEN',
     'PORTFOLIO_SHOWCASE_SLUG',
+    'PORTFOLIO_SNAPSHOT_SYNC_SECRET',
   ];
 
   let envContent = '';
@@ -94,7 +95,13 @@ async function checkEnvironmentVariables() {
     console.log(`✅ Variables detectées: ${detected.join(', ')}`);
   }
 
-  const missingPortfolioVars = ['PORTFOLIO_DATA_MODE', 'PORTFOLIO_API_BASE_URL', 'PORTFOLIO_API_ORIGIN', 'PORTFOLIO_API_TOKEN'].filter(
+  const missingPortfolioVars = [
+    'PORTFOLIO_DATA_MODE',
+    'PORTFOLIO_API_BASE_URL',
+    'PORTFOLIO_API_ORIGIN',
+    'PORTFOLIO_API_TOKEN',
+    'PORTFOLIO_SNAPSHOT_SYNC_SECRET',
+  ].filter(
     (varName) => !detected.includes(varName),
   );
 
@@ -137,6 +144,25 @@ async function checkEnvironmentVariables() {
   if (isProduction && portfolioOrigin !== canonicalOrigin) {
     console.error(`❌ ERREUR: PORTFOLIO_API_ORIGIN=${portfolioOrigin}. En production, le seul origin autorisé est "${canonicalOrigin}".`);
     return false;
+  }
+
+  const snapshotSecretMatch = envContent.match(/^PORTFOLIO_SNAPSHOT_SYNC_SECRET=(.+)$/m);
+  const snapshotSecret =
+    snapshotSecretMatch?.[1]?.trim() || process.env.PORTFOLIO_SNAPSHOT_SYNC_SECRET || '';
+
+  if (isProduction && !snapshotSecret) {
+    console.error('❌ ERREUR: PORTFOLIO_SNAPSHOT_SYNC_SECRET est obligatoire en production pour protéger le webhook de synchronisation du snapshot.');
+    return false;
+  }
+
+  const blobStoreIdMatch = envContent.match(/^BLOB_STORE_ID=(.+)$/m);
+  const blobStoreId =
+    blobStoreIdMatch?.[1]?.trim() || process.env.BLOB_STORE_ID || '';
+
+  if (blobStoreId) {
+    console.log('ℹ️  BLOB_STORE_ID détecté via l’intégration Vercel Blob.');
+  } else if (isProduction) {
+    console.log('ℹ️  Aucun BLOB_STORE_ID n’est défini localement; c’est normal si le store Blob est rattaché au projet Vercel et que l’auth passe par OIDC.');
   }
 
   console.log('✅ Environment variables check completed');

@@ -18,10 +18,11 @@ import {
   toPortfolioPreviewProject,
 } from "../lib/zodback-astro-api";
 
-const [localProjects, astroBootstrap] = await Promise.all([
+const [localProjects, astroBootstrapResult] = await Promise.all([
   getCollection("work"),
   fetchPortfolioAstroBootstrap(Astro.url.origin),
 ]);
+const astroBootstrap = astroBootstrapResult.data;
 const portfolioDataMode = getPortfolioDataMode();
 if (
   isApiRequiredMode(portfolioDataMode) &&
@@ -42,9 +43,10 @@ const projects =
         (a, b) => b.data.number - a.data.number,
       );
 applyPortfolioResponseHeaders(Astro.response.headers, {
-  source:
-    astroBootstrap?.projects && astroBootstrap.projects.length > 0 ? "api" : "local",
+  source: astroBootstrapResult.resolvedSource,
   mode: portfolioDataMode,
+  snapshotCapturedAt: astroBootstrapResult.snapshotCapturedAt,
+  endpoint: astroBootstrapResult.endpoint,
   requestOrigin: Astro.url.origin,
 });
 import dataUser from "../data/User.json";

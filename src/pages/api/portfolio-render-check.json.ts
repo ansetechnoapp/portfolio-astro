@@ -161,10 +161,14 @@ export const GET: APIRoute = async ({ url }) => {
   }
 
   try {
-    const bootstrap = await fetchPortfolioAstroBootstrap(requestOrigin);
+    const bootstrapResult = await fetchPortfolioAstroBootstrap(requestOrigin);
+    const bootstrap = bootstrapResult.data;
     diagnostics.bootstrapFetch = {
       success: true,
       details: {
+        source: bootstrapResult.resolvedSource,
+        endpoint: bootstrapResult.endpoint ?? null,
+        snapshotCapturedAt: bootstrapResult.snapshotCapturedAt ?? null,
         projectsCount: bootstrap?.projects?.length ?? 0,
         firstSlug: bootstrap?.projects?.[0]?.slug ?? null,
       },

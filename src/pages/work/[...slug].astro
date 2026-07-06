@@ -21,10 +21,11 @@ import {
 import { fetchPortfolioAstroBootstrap } from "../../lib/zodback-astro-api";
 
 const routeSlug = String(Astro.params.slug || "");
-const [localEntries, astroBootstrap] = await Promise.all([
+const [localEntries, astroBootstrapResult] = await Promise.all([
   getCollection("work"),
   fetchPortfolioAstroBootstrap(Astro.url.origin),
 ]);
+const astroBootstrap = astroBootstrapResult.data;
 const localEntry = localEntries.find((entry) => entry.slug === routeSlug);
 const apiProject = astroBootstrap?.projects?.find(
   (project) => project.slug === routeSlug,
@@ -70,8 +71,10 @@ const sourceProject = apiProject
     }
   : localEntry!;
 applyPortfolioResponseHeaders(Astro.response.headers, {
-  source: apiProject ? "api" : "local",
+  source: astroBootstrapResult.resolvedSource,
   mode: portfolioDataMode,
+  snapshotCapturedAt: astroBootstrapResult.snapshotCapturedAt,
+  endpoint: astroBootstrapResult.endpoint,
   requestOrigin: Astro.url.origin,
 });
 

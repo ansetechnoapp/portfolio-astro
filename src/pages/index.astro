@@ -542,10 +542,11 @@ const projects =
         .sort((a, b) => b.data.number - a.data.number)
         .slice(0, 4);
 applyPortfolioResponseHeaders(Astro.response.headers, {
-  source: apiPortfolio ? "api" : "local",
+  source: portfolioApiResult.resolvedSource,
   mode: portfolioDataMode,
   endpoint: portfolioApiResult.endpoint,
   requestOrigin: portfolioApiResult.requestOrigin,
+  snapshotCapturedAt: portfolioApiResult.snapshotCapturedAt,
 });
 
 // import FilterProjects from "../components/reactJS/FilterProjects";

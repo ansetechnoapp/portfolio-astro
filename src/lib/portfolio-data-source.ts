@@ -1,11 +1,18 @@
+import {
+  getSnapshotBlobKey,
+  readPortfolioSnapshot,
+} from './portfolio-snapshot';
+
 export type PortfolioDataMode = "prefer-api" | "api-required" | "local-only";
-export type PortfolioDataSource = "api" | "local";
+export type PortfolioDataSource = "api" | "snapshot" | "local";
 
 export type PortfolioFetchResult<T> = {
   data: T | null;
   endpoint?: string;
   requestOrigin: string;
   mode: PortfolioDataMode;
+  resolvedSource: PortfolioDataSource;
+  snapshotCapturedAt?: string;
 };
 
 const CANONICAL_INTEGRATION_API_BASE_URL = "https://integrations-api.zodev.live";
@@ -101,6 +108,23 @@ function joinUrl(base: string, path: string) {
   return `${normalizedBase}${normalizedPath}`;
 }
 
+const API_TIMEOUT = 2500; // 2.5 seconds before fallback to snapshot as per requirements
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeout: number): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export async function fetchPortfolioApiData<T>({
   path,
   requestOrigin,
@@ -115,6 +139,7 @@ export async function fetchPortfolioApiData<T>({
       data: null,
       mode: config.mode,
       requestOrigin: config.requestOrigin,
+      resolvedSource: "local",
     };
   }
 
@@ -126,11 +151,12 @@ export async function fetchPortfolioApiData<T>({
 
   let lastError: Error | null = null;
 
+  // First try all API bases with timeout
   for (const base of config.candidateBases) {
     const url = joinUrl(base, path);
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         headers: {
           Accept: "application/json",
           Origin: config.requestOrigin,
@@ -138,7 +164,7 @@ export async function fetchPortfolioApiData<T>({
             ? { Authorization: `Bearer ${config.apiToken}` }
             : {}),
         },
-      });
+      }, API_TIMEOUT);
 
       if (!response.ok) {
         const bodyPreview = (await response.text()).slice(0, 160).replace(/\s+/g, " ");
@@ -154,12 +180,13 @@ export async function fetchPortfolioApiData<T>({
         data?: T;
       };
 
-      if (payload?.data) {
+      if (payload?.data !== undefined && payload?.data !== null) {
         return {
           data: payload.data,
           endpoint: url,
           mode: config.mode,
           requestOrigin: config.requestOrigin,
+          resolvedSource: "api",
         };
       }
 
@@ -170,9 +197,36 @@ export async function fetchPortfolioApiData<T>({
     }
   }
 
+  // All APIs failed, try snapshot fallback
+  console.warn(`All portfolio APIs failed for ${path}, attempting snapshot fallback... Error: ${lastError?.message}`);
+
+  const snapshot = await readPortfolioSnapshot(config.showcaseSlug);
+  if (snapshot) {
+    // Check which payload we need based on the path
+    let snapshotData: unknown = null;
+    if (path.includes('/astro/') && path.includes('/bootstrap')) {
+      snapshotData = snapshot.payloads.astroBootstrap;
+    } else if (path.includes('/showcase/')) {
+      snapshotData = snapshot.payloads.showcase;
+    }
+
+    if (snapshotData !== null && snapshotData !== undefined) {
+      console.log(`✅ Successfully loaded snapshot fallback for ${path}, captured at ${snapshot.capturedAt}`);
+      return {
+        data: snapshotData as T,
+        endpoint: `snapshot:${path}`,
+        mode: config.mode,
+        requestOrigin: config.requestOrigin,
+        resolvedSource: "snapshot",
+        snapshotCapturedAt: snapshot.capturedAt,
+      };
+    }
+  }
+
+  // If we reach here, both API and snapshot failed
   if (isApiRequiredMode(config.mode)) {
     throw new Error(
-      `Portfolio API required but unavailable for ${path}: ${
+      `Portfolio API required but unavailable and no valid snapshot found for ${path}: ${
         lastError?.message || "unknown error"
       }`,
     );
@@ -182,6 +236,7 @@ export async function fetchPortfolioApiData<T>({
     data: null,
     mode: config.mode,
     requestOrigin: config.requestOrigin,
+    resolvedSource: "local",
   };
 }
 
@@ -192,11 +247,13 @@ export function applyPortfolioResponseHeaders(
     mode,
     endpoint,
     requestOrigin,
+    snapshotCapturedAt,
   }: {
     source: PortfolioDataSource;
     mode: PortfolioDataMode;
     endpoint?: string;
     requestOrigin: string;
+    snapshotCapturedAt?: string;
   },
 ) {
   headers.set("x-portfolio-data-source", source);
@@ -205,4 +262,11 @@ export function applyPortfolioResponseHeaders(
   if (endpoint) {
     headers.set("x-portfolio-api-endpoint", endpoint);
   }
+  if (snapshotCapturedAt) {
+    headers.set("x-portfolio-snapshot-captured-at", snapshotCapturedAt);
+  }
+}
+
+export function getPortfolioSnapshotEndpoint(showcaseSlug: string) {
+  return `snapshot:${getSnapshotBlobKey(showcaseSlug)}`;
 }

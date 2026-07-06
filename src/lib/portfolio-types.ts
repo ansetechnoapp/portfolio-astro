@@ -35,3 +35,29 @@ export type AstroBootstrapPayload = {
   timelineEvents?: Array<Record<string, unknown>>;
   projects?: AstroBootstrapProject[];
 };
+
+export type PortfolioSyncRequest = {
+  showcaseSlug?: string; // default main-portfolio
+  reason: "webhook" | "scheduled-reconcile" | "startup-reconcile" | "manual";
+  eventId?: string;
+  projectId?: number;
+  resourceType?: "profile" | "project" | "skill" | "experience" | "testimonial";
+  resourceId?: number | string;
+  operation?: "create" | "update" | "delete" | "publish" | "unpublish";
+};
+
+export type PortfolioSnapshotV1 = {
+  version: 1;
+  showcaseSlug: string;
+  capturedAt: string;
+  source: "zodback";
+  reason: PortfolioSyncRequest["reason"];
+  upstream: {
+    showcaseEndpoint: string;
+    astroBootstrapEndpoint: string;
+  };
+  payloads: {
+    showcase: unknown;       // data from /api/portfolio/showcase/:slug
+    astroBootstrap: unknown; // data from /api/portfolio/astro/:slug/bootstrap
+  };
+};
