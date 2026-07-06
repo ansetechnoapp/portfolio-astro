@@ -100,15 +100,43 @@ async function checkEnvironmentVariables() {
 
   if (missingPortfolioVars.length > 0) {
     console.log(`⚠️  Variables portfolio non détectées: ${missingPortfolioVars.join(', ')}`);
-    console.log('Assurez-vous qu’elles sont configurées dans Vercel pour que le portfolio charge les données ZodBack en production.');
+    console.log('Assurez-vous qu’elles sont configurées dans Vercel pour que le portfolio charge les données ZodBack en production via integrations-api.zodev.live.');
   }
 
   const portfolioModeMatch = envContent.match(/^PORTFOLIO_DATA_MODE=(.+)$/m);
   const portfolioMode =
     portfolioModeMatch?.[1]?.trim() || process.env.PORTFOLIO_DATA_MODE || '';
 
-  if (portfolioMode && portfolioMode !== 'api-required') {
-    console.log(`⚠️  PORTFOLIO_DATA_MODE=${portfolioMode}. Utilisez "api-required" en preview/production si ZodBack est la source de vérité.`);
+  // Vérification stricte des variables de production
+  const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+
+  if (isProduction && portfolioMode !== 'api-required') {
+    console.error(`❌ ERREUR: PORTFOLIO_DATA_MODE=${portfolioMode}. En production, "api-required" est OBLIGATOIRE pour garantir l'utilisation de l'API comme seule source de vérité.`);
+    return false;
+  } else if (portfolioMode && portfolioMode !== 'api-required') {
+    console.log(`⚠️  PORTFOLIO_DATA_MODE=${portfolioMode}. Il est recommandé d'utiliser "api-required" pour toute utilisation non locale.`);
+  }
+
+  const portfolioBaseUrlMatch = envContent.match(/^PORTFOLIO_API_BASE_URL=(.+)$/m);
+  const portfolioBaseUrl =
+    portfolioBaseUrlMatch?.[1]?.trim() || process.env.PORTFOLIO_API_BASE_URL || '';
+
+  const canonicalBaseUrl = 'https://integrations-api.zodev.live';
+  if (isProduction && portfolioBaseUrl !== canonicalBaseUrl) {
+    console.error(`❌ ERREUR: PORTFOLIO_API_BASE_URL=${portfolioBaseUrl}. En production, le seul host autorisé est le canonique "${canonicalBaseUrl}".`);
+    return false;
+  } else if (portfolioBaseUrl && portfolioBaseUrl !== canonicalBaseUrl) {
+    console.log(`⚠️  PORTFOLIO_API_BASE_URL=${portfolioBaseUrl}. Le host canonique d'integration est "${canonicalBaseUrl}". L'ancien host api.zodev.live est obsolète.`);
+  }
+
+  const canonicalOrigin = 'https://my.zodev.live';
+  const portfolioOriginMatch = envContent.match(/^PORTFOLIO_API_ORIGIN=(.+)$/m);
+  const portfolioOrigin =
+    portfolioOriginMatch?.[1]?.trim() || process.env.PORTFOLIO_API_ORIGIN || '';
+
+  if (isProduction && portfolioOrigin !== canonicalOrigin) {
+    console.error(`❌ ERREUR: PORTFOLIO_API_ORIGIN=${portfolioOrigin}. En production, le seul origin autorisé est "${canonicalOrigin}".`);
+    return false;
   }
 
   console.log('✅ Environment variables check completed');

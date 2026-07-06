@@ -8,7 +8,8 @@ export type PortfolioFetchResult<T> = {
   mode: PortfolioDataMode;
 };
 
-const DEFAULT_API_BASE_URL = "https://api.zodev.live";
+const CANONICAL_INTEGRATION_API_BASE_URL = "https://integrations-api.zodev.live";
+const LEGACY_PUBLIC_API_BASE_URL = "https://api.zodev.live";
 const DEFAULT_REQUEST_ORIGIN = "https://my.zodev.live";
 
 function normalizeMode(value?: string | null): PortfolioDataMode | null {
@@ -36,7 +37,7 @@ export function getPortfolioDataMode(): PortfolioDataMode {
   return (
     normalizeMode(import.meta.env.PORTFOLIO_DATA_MODE) ??
     normalizeMode(process.env.PORTFOLIO_DATA_MODE) ??
-    "prefer-api"
+    "api-required"
   );
 }
 
@@ -53,7 +54,7 @@ export function getPortfolioRuntimeConfig(requestOrigin?: string) {
   const apiBaseUrl =
     import.meta.env.PORTFOLIO_API_BASE_URL?.trim() ||
     process.env.PORTFOLIO_API_BASE_URL?.trim() ||
-    DEFAULT_API_BASE_URL;
+    CANONICAL_INTEGRATION_API_BASE_URL;
   const apiToken =
     import.meta.env.PORTFOLIO_API_TOKEN?.trim() ||
     process.env.PORTFOLIO_API_TOKEN?.trim() ||
@@ -71,12 +72,13 @@ export function getPortfolioRuntimeConfig(requestOrigin?: string) {
   const candidateBases = Array.from(
     new Set(
       mode === "api-required"
-        ? [apiBaseUrl, DEFAULT_API_BASE_URL]
+        ? [apiBaseUrl, CANONICAL_INTEGRATION_API_BASE_URL, LEGACY_PUBLIC_API_BASE_URL]
         : [
             apiBaseUrl,
+            CANONICAL_INTEGRATION_API_BASE_URL,
             "http://127.0.0.1:3031",
             "http://127.0.0.1:3013",
-            DEFAULT_API_BASE_URL,
+            LEGACY_PUBLIC_API_BASE_URL,
           ],
     ),
   ).filter(Boolean);
@@ -84,7 +86,9 @@ export function getPortfolioRuntimeConfig(requestOrigin?: string) {
   return {
     apiBaseUrl,
     apiToken,
+    canonicalApiBaseUrl: CANONICAL_INTEGRATION_API_BASE_URL,
     candidateBases,
+    legacyApiBaseUrl: LEGACY_PUBLIC_API_BASE_URL,
     mode,
     requestOrigin: requestOriginValue,
     showcaseSlug,

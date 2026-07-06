@@ -26,7 +26,7 @@ This guide addresses the deployment issues where local changes aren't appearing 
 
 ### Step 1: Run Pre-deployment Check
 ```bash
-pnpm run deploy-check
+bun run deploy-check
 ```
 This will verify:
 - All background images exist
@@ -35,7 +35,7 @@ This will verify:
 
 ### Step 2: Test Local Build
 ```bash
-pnpm run build
+bun run build
 ```
 Ensure the build completes without errors.
 
@@ -48,7 +48,7 @@ Make sure these environment variables are set in your Vercel dashboard:
 
 ```
 PORTFOLIO_DATA_MODE = api-required
-PORTFOLIO_API_BASE_URL = https://api.zodev.live
+PORTFOLIO_API_BASE_URL = https://integrations-api.zodev.live
 PORTFOLIO_API_ORIGIN = https://my.zodev.live
 PORTFOLIO_API_TOKEN = <project token>
 PORTFOLIO_SHOWCASE_SLUG = main-portfolio
@@ -56,6 +56,11 @@ NODE_ENV = production
 ```
 
 The legacy Supabase-backed `/docs` module has been archived and is no longer part of the active production surface.
+
+Cloudflare policy for `my.zodev.live`:
+- keep Bot Fight Mode disabled on the zone while the portfolio SSR depends on `PORTFOLIO_DATA_MODE=api-required`
+- do not rely on WAF custom rules to exempt this traffic; Cloudflare Bot Fight Mode cannot be skipped that way
+- if stronger bot protection becomes necessary later, move to a strategy that supports explicit exceptions, or isolate the integration host further
 
 ### Step 4: Force Rebuild on Vercel
 To ensure Vercel picks up all changes:
@@ -86,7 +91,7 @@ If changes still don't appear:
 ### If Images Still Don't Load
 1. Check the browser's Network tab for 404 errors
 2. Verify image paths in the deployed site
-3. Run `pnpm run optimize-images` locally and commit the changes
+3. Run `bun run optimize-images` locally and commit the changes
 
 ### If Environment Variables Don't Work
 1. Verify they're set in Vercel dashboard
@@ -117,7 +122,7 @@ After deployment, verify:
 
 ## Next Steps
 
-1. Run the deployment check: `pnpm run deploy-check`
+1. Run the deployment check: `bun run deploy-check`
 2. Commit and push changes
 3. Monitor the Vercel deployment
 4. Test the deployed site thoroughly

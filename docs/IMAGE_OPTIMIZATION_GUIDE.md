@@ -14,15 +14,15 @@ Ce projet dispose d'un système d'optimisation d'images automatique et performan
 ### Pour ajouter une nouvelle image :
 
 1. **Placez l'image** dans `public/assets/` ou un sous-dossier approprié
-2. **Lancez le build** : `pnpm build`
+2. **Lancez le build** : `bun run build`
 3. **L'image sera automatiquement optimisée** ✨
 4. **L'original sera déplacé** vers `unused_images/` 📦
 
 ### Commandes disponibles :
 ```bash
-pnpm optimize-images    # Optimise les nouvelles images
-pnpm cleanup-images     # Organise les images existantes
-pnpm setup-images       # Nettoyage + optimisation complète
+bun run optimize-images    # Optimise les nouvelles images
+bun run cleanup-images     # Organise les images existantes
+bun run setup-images       # Nettoyage + optimisation complète
 ```
 
 ### ✨ **Fonctionnalités Intelligentes**
@@ -160,13 +160,13 @@ watchDirectories: [
 
 ```bash
 # Optimisation automatique (incluse dans le build)
-pnpm build
+bun run build
 
 # Optimisation manuelle uniquement
-pnpm optimize-images
+bun run optimize-images
 
 # Build sans optimisation
-pnpm build:only
+bun run build:only
 
 # Test d'optimisation
 node scripts/test-optimization.js
@@ -176,7 +176,7 @@ node scripts/test-optimization.js
 
 ### Image non optimisée ?
 1. Vérifiez que l'image est dans un dossier surveillé
-2. Lancez `pnpm optimize-images`
+2. Lancez `bun run optimize-images`
 3. Vérifiez les logs pour les erreurs
 
 ### Formats non supportés ?
