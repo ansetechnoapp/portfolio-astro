@@ -83,6 +83,7 @@ const {
       </p>
       <div class="presentation-cta">
         <a href="#portfolio-section" class="btn">{i18n.work.viewProjects}</a>
+        <a href="/production-roadmap/" class="btn btn-secondary">{i18n.nav.roadmap}</a>
       </div>
     </div>
   </section>
@@ -149,6 +150,16 @@ const {
     .presentation-section {
       padding-top: 1rem;
     }
+
+    .presentation-cta {
+      gap: 0.6rem;
+    }
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+      text-align: center;
+    }
   }
 
   .presentation-section::before {
@@ -192,6 +203,10 @@ const {
 
   .presentation-cta {
     margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.85rem;
   }
 
   .btn {
@@ -203,6 +218,20 @@ const {
     font-weight: 600;
     text-decoration: none;
     transition: all 0.2s ease;
+  }
+
+  .btn-secondary {
+    background: color-mix(in srgb, transparent, var(--gray-900) 8%);
+    color: var(--gray-100);
+    border: 1px solid color-mix(in srgb, var(--accent-regular) 35%, var(--gray-700));
+    box-shadow: none;
+    backdrop-filter: blur(8px);
+  }
+
+  .btn-secondary:hover {
+    background: color-mix(in srgb, var(--accent-regular) 12%, transparent);
+    color: var(--gray-0);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent-regular) 25%, transparent);
   }
 
   .btn:hover {

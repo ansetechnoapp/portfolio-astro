@@ -9,10 +9,9 @@ const lang = getLangFromCookies(Astro.cookies);
 const i18n = getTranslations(lang);
 
 /** Main menu items */
-const textLinks: { label: string; href: string; variant?: "default" | "button" }[] = [
+const textLinks: { label: string; href: string }[] = [
   { label: i18n.nav.home, href: "/" },
   { label: i18n.nav.project, href: "/work/" },
-  { label: i18n.nav.roadmap, href: "/production-roadmap/", variant: "button" },
   { label: i18n.nav.blog, href: "/blog/" },
   { label: i18n.nav.tools, href: "/widgetCss/" },
 ];
@@ -110,15 +109,12 @@ const iconLinks: {
   <div class="desktop-nav">
     <ul class="nav-items">
       {
-        textLinks.map(({ label, href, variant }) => (
+        textLinks.map(({ label, href }) => (
           <li>
               <a
               aria-current={Astro.url.pathname === href}
               class:list={[
                 "link",
-                {
-                  "roadmap-link": variant === "button",
-                },
                 {
                   active:
                     Astro.url.pathname === href ||
@@ -159,15 +155,12 @@ const iconLinks: {
     <div class="noscript-nav">
       <ul class="nav-items">
         {
-          textLinks.map(({ label, href, variant }) => (
+          textLinks.map(({ label, href }) => (
             <li>
               <a
                 aria-current={Astro.url.pathname === href}
                 class:list={[
                   "link",
-                  {
-                    "roadmap-link": variant === "button",
-                  },
                   {
                     active:
                       Astro.url.pathname === href ||
@@ -201,15 +194,12 @@ const iconLinks: {
   <div id="menu-content" class="menu-content">
     <ul class="nav-items">
       {
-        textLinks.map(({ label, href, variant }) => (
+        textLinks.map(({ label, href }) => (
           <li>
               <a
                 aria-current={Astro.url.pathname === href}
                 class:list={[
                   "link",
-                  {
-                    "roadmap-link": variant === "button",
-                  },
                   {
                     active:
                       Astro.url.pathname === href ||
@@ -593,24 +583,6 @@ const iconLinks: {
     color: var(--accent-regular);
   }
 
-  .link.roadmap-link {
-    background: var(--accent-regular);
-    color: var(--accent-text-over);
-    box-shadow: 0 4px 12px rgba(118, 17, 166, 0.18);
-  }
-
-  .link.roadmap-link:hover,
-  .link.roadmap-link:focus {
-    color: var(--accent-text-over);
-    box-shadow: 0 6px 16px rgba(118, 17, 166, 0.24);
-  }
-
-  .link.roadmap-link.active {
-    color: var(--accent-text-over);
-    background-color: var(--accent-regular);
-    box-shadow: 0 6px 18px rgba(118, 17, 166, 0.36);
-  }
-
   .menu-footer {
     --icon-size: 2rem;
     --icon-padding: 0.5rem;
@@ -826,16 +798,6 @@ const iconLinks: {
       box-shadow: 0 2px 10px rgba(118, 17, 166, 0.2);
     }
 
-    .link.roadmap-link {
-      background-color: var(--accent-regular);
-      color: var(--accent-text-over);
-      box-shadow: 0 2px 10px rgba(118, 17, 166, 0.18);
-    }
-
-    .link.roadmap-link.active {
-      box-shadow: 0 2px 12px rgba(118, 17, 166, 0.3);
-    }
-
     /* Centrer les icônes sociales sur mobile */
     .socials {
       justify-content: center;
@@ -931,9 +893,6 @@ const iconLinks: {
       font-size: 0.9rem;
     }
 
-    .link.roadmap-link {
-      padding: 0.6rem;
-    }
   }
 
   @media (min-width: 48em) {
