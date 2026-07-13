@@ -68,9 +68,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
 
   if (!isOpen) return null;
   const isBetaProject = Boolean(
-    projectData.isBeta ||
-      projectData.tags.some((tag) => /beta/i.test(tag)) ||
-      /beta/i.test(projectData.title),
+    projectData.isBeta || projectData.tags.some((tag) => /beta/i.test(tag)),
   );
 
   // Format the device type for display

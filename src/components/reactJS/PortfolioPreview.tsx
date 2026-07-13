@@ -39,7 +39,7 @@ export default function PortfolioPreview({ project, activeFilter = 'all' }: Port
   const [isModalOpen, setIsModalOpen] = useState(false);
   const deviceLabel = data.device ? data.device.toUpperCase() : 'PROJECT';
   const isBetaProject = Boolean(
-    data.isBeta || data.tags.some((tag) => /beta/i.test(tag)) || /beta/i.test(data.title),
+    data.isBeta || data.tags.some((tag) => /beta/i.test(tag)),
   );
 
   useEffect(() => {

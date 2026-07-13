@@ -404,6 +404,7 @@ function normalizeTimelineEvent(row: ApiExperienceRow, index: number) {
 
 function normalizeProject(project: ApiProjectRow, index: number): PreviewProject {
   const metadata = isRecord(project.metadata) ? project.metadata : {};
+  const tags = uniqueStrings(toStringArray(metadata.tags));
   const additionalImages = Array.isArray(metadata.additionalImages)
     ? metadata.additionalImages
         .map((image) => {
@@ -447,13 +448,15 @@ function normalizeProject(project: ApiProjectRow, index: number): PreviewProject
         "No description available.",
       tech,
       publishDate: new Date(),
-      tags: [],
       img: normalizeImage(project.featuredImage),
       img_alt: `${project.title?.trim() || "Project"} preview`,
       github: normalizeUrl(project.repositoryUrl),
       liveDemo: normalizeUrl(project.projectUrl),
       device,
-      isBeta: Boolean(project.isBeta),
+      tags,
+      isBeta: Boolean(
+        project.isBeta ?? tags.some((tag) => /beta/i.test(tag)),
+      ),
       additionalImages,
     },
     render: async () => ({}),
