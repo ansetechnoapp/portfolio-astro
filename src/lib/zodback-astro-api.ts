@@ -38,7 +38,10 @@ export function toPortfolioPreviewProject(project: AstroBootstrapProject) {
       github: project.data.github || undefined,
       liveDemo: project.data.liveDemo || undefined,
       device: project.data.device || undefined,
-      isBeta: Boolean(project.data.isBeta),
+      isBeta: Boolean(
+        project.data.isBeta ||
+          project.data.tags?.some((tag) => /beta/i.test(tag)),
+      ),
       additionalImages: project.data.additionalImages || [],
     },
   };

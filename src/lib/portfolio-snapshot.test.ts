@@ -177,6 +177,21 @@ describe("zodback-astro-api", () => {
 
     expect(previewProject.data.isBeta).toBe(true);
   });
+
+  test("derives the beta flag from beta tags when the explicit flag is absent", () => {
+    const previewProject = toPortfolioPreviewProject({
+      id: "project-2",
+      slug: "tagged-beta-project",
+      bodyMarkdown: "## Tagged beta project",
+      data: {
+        title: "Tagged beta project",
+        description: "Preview project",
+        tags: ["Beta", "Showcase"],
+      },
+    } as AstroBootstrapProject);
+
+    expect(previewProject.data.isBeta).toBe(true);
+  });
 });
 
 describe("portfolio-data-source", () => {

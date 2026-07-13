@@ -454,9 +454,7 @@ function normalizeProject(project: ApiProjectRow, index: number): PreviewProject
       liveDemo: normalizeUrl(project.projectUrl),
       device,
       tags,
-      isBeta: Boolean(
-        project.isBeta ?? tags.some((tag) => /beta/i.test(tag)),
-      ),
+      isBeta: Boolean(project.isBeta || tags.some((tag) => /beta/i.test(tag))),
       additionalImages,
     },
     render: async () => ({}),
