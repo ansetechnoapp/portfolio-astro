@@ -67,6 +67,11 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   };
 
   if (!isOpen) return null;
+  const isBetaProject = Boolean(
+    projectData.isBeta ||
+      projectData.tags.some((tag) => /beta/i.test(tag)) ||
+      /beta/i.test(projectData.title),
+  );
 
   // Format the device type for display
   const formatDeviceType = (device?: string) => {
@@ -189,7 +194,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
               >
                 {formatDeviceType(projectData.device)}
               </span>
-              {projectData.isBeta && (
+              {isBetaProject && (
                 <span
                   className="text-xs font-semibold uppercase tracking-[0.2em] px-3 py-1 rounded-full"
                   style={{

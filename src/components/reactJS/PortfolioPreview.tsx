@@ -38,6 +38,9 @@ export default function PortfolioPreview({ project, activeFilter = 'all' }: Port
   const [currentFilter, setCurrentFilter] = useState(activeFilter);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const deviceLabel = data.device ? data.device.toUpperCase() : 'PROJECT';
+  const isBetaProject = Boolean(
+    data.isBeta || data.tags.some((tag) => /beta/i.test(tag)) || /beta/i.test(data.title),
+  );
 
   useEffect(() => {
     const handleFilterChange = (e: CustomEvent) => {
@@ -106,7 +109,7 @@ export default function PortfolioPreview({ project, activeFilter = 'all' }: Port
           <div className="mb-2 flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h3 className="text-xl font-semibold leading-none tracking-tight">{data.title}</h3>
-              {data.isBeta && (
+              {isBetaProject && (
                 <span className="inline-flex items-center rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300">
                   Beta
                 </span>

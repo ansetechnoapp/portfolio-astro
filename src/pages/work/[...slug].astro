@@ -83,7 +83,11 @@ const Content = localRendered?.Content;
 const renderedBodyHtml = apiProject
   ? await marked.parse(apiProject.bodyMarkdown || "")
   : null;
-const projectIsBeta = Boolean(apiProject?.data.isBeta ?? localEntry?.data.isBeta);
+const projectIsBeta = Boolean(
+  sourceProject.data.tags?.some((tag) => /beta/i.test(tag)) ||
+    apiProject?.data.isBeta ||
+    localEntry?.data.isBeta,
+);
 
 // Enhanced SEO metadata for projects
 const projectTitle = `${sourceProject.data.title} | Kevin Otty - Développeur Web & Mobile`;
