@@ -12,6 +12,7 @@ interface ProjectData {
   github?: string;
   liveDemo?: string;
   device?: string | undefined;
+  isBeta?: boolean;
   additionalImages?: Array<{
     url: string;
     alt?: string;
@@ -177,7 +178,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           {/* Right Column: Project Details */}
           <div className="flex flex-col justify-start p-8 lg:p-12 space-y-6 project-modal-content overflow-y-auto">
             {/* Category Tag */}
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span
                 className="text-sm font-medium uppercase tracking-wider px-3 py-1 rounded-full"
                 style={{
@@ -188,6 +189,18 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
               >
                 {formatDeviceType(projectData.device)}
               </span>
+              {projectData.isBeta && (
+                <span
+                  className="text-xs font-semibold uppercase tracking-[0.2em] px-3 py-1 rounded-full"
+                  style={{
+                    color: '#fbbf24',
+                    background: 'rgba(251, 191, 36, 0.12)',
+                    border: '1px solid rgba(251, 191, 36, 0.28)',
+                  }}
+                >
+                  Beta
+                </span>
+              )}
               <span 
                 className="text-xs px-2 py-1 rounded"
                 style={{

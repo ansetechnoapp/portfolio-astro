@@ -83,6 +83,7 @@ const Content = localRendered?.Content;
 const renderedBodyHtml = apiProject
   ? await marked.parse(apiProject.bodyMarkdown || "")
   : null;
+const projectIsBeta = Boolean(apiProject?.data.isBeta ?? localEntry?.data.isBeta);
 
 // Enhanced SEO metadata for projects
 const projectTitle = `${sourceProject.data.title} | Kevin Otty - Développeur Web & Mobile`;
@@ -111,7 +112,10 @@ const projectMetadata = {
         <a class="back-link" href="/work/"
           ><Icon icon="arrow-left" /> Back to Projects</a
         >
-        <h1 class="project-title">{sourceProject.data.title}</h1>
+        <div class="project-title-row">
+          <h1 class="project-title">{sourceProject.data.title}</h1>
+          {projectIsBeta && <span class="project-beta-pill">Beta</span>}
+        </div>
         <p class="project-description">{sourceProject.data.description}</p>
 
          <!-- Enhanced Hero Image with Professional Mockup Context -->
@@ -496,7 +500,7 @@ const projectMetadata = {
     font-size: clamp(2.5rem, 5vw, 3.5rem);
     line-height: 1.1;
     font-weight: 700;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0;
     background: var(
       --gradient-text,
       linear-gradient(to right, var(--gray-0), var(--accent-light))
@@ -504,6 +508,30 @@ const projectMetadata = {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .project-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+
+  .project-beta-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(251, 191, 36, 0.32);
+    background: rgba(251, 191, 36, 0.12);
+    color: #fbbf24;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .project-description {

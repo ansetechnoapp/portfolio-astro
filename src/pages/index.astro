@@ -74,6 +74,7 @@ type ApiProjectRow = {
   repositoryUrl?: string | null;
   sortOrder?: number | null;
   metadata?: unknown;
+  isBeta?: boolean | null;
 };
 
 type ApiExperienceRow = {
@@ -156,6 +157,7 @@ type PreviewProject = {
       url: string;
       alt?: string;
     }>;
+    isBeta?: boolean;
   };
   render: () => Promise<unknown>;
 };
@@ -451,6 +453,7 @@ function normalizeProject(project: ApiProjectRow, index: number): PreviewProject
       github: normalizeUrl(project.repositoryUrl),
       liveDemo: normalizeUrl(project.projectUrl),
       device,
+      isBeta: Boolean(project.isBeta),
       additionalImages,
     },
     render: async () => ({}),

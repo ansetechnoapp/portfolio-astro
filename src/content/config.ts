@@ -15,6 +15,7 @@ export const collections = {
 			github: z.string().optional(),
 			liveDemo: z.string().optional(),
 			device: z.string().optional(),
+			isBeta: z.boolean().optional(),
 			// New case study fields
 			client: z.string().optional(),
 			services: z.array(z.string()).optional(),

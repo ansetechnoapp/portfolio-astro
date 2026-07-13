@@ -6,8 +6,11 @@ import {
   mock,
   test,
 } from "bun:test";
-import type { PortfolioSnapshotV1 } from "./portfolio-types";
-import type { AstroBootstrapPayload } from "./portfolio-types";
+import type {
+  AstroBootstrapPayload,
+  AstroBootstrapProject,
+  PortfolioSnapshotV1,
+} from "./portfolio-types";
 
 type BlobResponse = {
   statusCode: number;
@@ -45,6 +48,7 @@ const {
   readPortfolioSnapshot,
   writePortfolioSnapshot,
 } = await import("./portfolio-snapshot");
+const { toPortfolioPreviewProject } = await import("./zodback-astro-api");
 const {
   buildPortfolioRequestHeaders,
   fetchPortfolioApiData,
@@ -155,6 +159,23 @@ describe("portfolio-snapshot", () => {
     };
 
     await expect(readPortfolioSnapshot()).resolves.toBeNull();
+  });
+});
+
+describe("zodback-astro-api", () => {
+  test("propagates the beta flag into preview projects", () => {
+    const previewProject = toPortfolioPreviewProject({
+      id: "project-1",
+      slug: "beta-project",
+      bodyMarkdown: "## Beta project",
+      data: {
+        title: "Beta project",
+        description: "Preview project",
+        isBeta: true,
+      },
+    } as AstroBootstrapProject);
+
+    expect(previewProject.data.isBeta).toBe(true);
   });
 });
 

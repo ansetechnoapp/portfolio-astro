@@ -15,6 +15,7 @@ export type AstroBootstrapProject = {
     liveDemo?: string | null;
     device?: string | null;
     client?: string | null;
+    isBeta?: boolean;
     services?: string[];
     projectType?: string | null;
     duration?: string | null;
