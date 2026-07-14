@@ -18,6 +18,11 @@ import {
   getPortfolioDataMode,
   isApiRequiredMode,
 } from "../../lib/portfolio-data-source";
+import {
+  buildResponsiveImageSources,
+  mergePortfolioImages,
+  type PortfolioImageResolution,
+} from "../../lib/portfolio-images";
 import { fetchPortfolioAstroBootstrap } from "../../lib/zodback-astro-api";
 
 const routeSlug = String(Astro.params.slug || "");
@@ -42,6 +47,28 @@ if (!apiProject && !localEntry) {
   throw new Error(`Project not found for slug: ${routeSlug}`);
 }
 
+const localImageFallback = localEntry
+  ? {
+      img: localEntry.data.img,
+      img_alt: localEntry.data.img_alt,
+      additionalImages: localEntry.data.additionalImages,
+    }
+  : undefined;
+const projectImageData: PortfolioImageResolution = apiProject
+  ? mergePortfolioImages(
+      {
+        img: apiProject.data.img,
+        img_alt: apiProject.data.img_alt,
+        additionalImages: apiProject.data.additionalImages,
+      },
+      localImageFallback,
+    )
+  : {
+      img: localEntry!.data.img,
+      img_alt: localEntry!.data.img_alt,
+      fallbackImg: undefined,
+      additionalImages: localEntry!.data.additionalImages ?? [],
+    };
 const sourceProject = apiProject
   ? {
       slug: apiProject.slug,
@@ -53,8 +80,7 @@ const sourceProject = apiProject
           ? new Date(apiProject.data.publishDate)
           : undefined,
         tags: apiProject.data.tags || [],
-        img: apiProject.data.img || "/assets/social-preview.jpg",
-        img_alt: apiProject.data.img_alt || undefined,
+        ...projectImageData,
         github: apiProject.data.github || undefined,
         liveDemo: apiProject.data.liveDemo || undefined,
         device: apiProject.data.device || undefined,
@@ -64,7 +90,6 @@ const sourceProject = apiProject
         duration: apiProject.data.duration || undefined,
         challenge: apiProject.data.challenge || undefined,
         solution: apiProject.data.solution || undefined,
-        additionalImages: apiProject.data.additionalImages || undefined,
         features: apiProject.data.features || undefined,
         demoVideo: apiProject.data.demoVideo || undefined,
       },
@@ -101,6 +126,8 @@ const projectMetadata = {
   modifiedTime: new Date().toISOString(),
   tags: sourceProject.data.tags || [],
 };
+const mainImageSources = buildResponsiveImageSources(projectImageData.img);
+const mainImageFallbackSrc = projectImageData.fallbackImg || projectImageData.img;
 ---
 
 <Layout
@@ -125,34 +152,42 @@ const projectMetadata = {
          <!-- Enhanced Hero Image with Professional Mockup Context -->
     <div class="project-showcase">
       {
-        sourceProject.data.img && (
+        projectImageData.img && (
           <div class="main-image-container">
             <div class="mockup-frame">
               <div class="main-image">
-                <picture>
-                  {/* AVIF format */}
-                  <source
-                    type="image/avif"
-                    srcset={`${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_optimized.avif")} 1x, ${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_640w.avif")} 640w, ${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_1024w.avif")} 1024w`}
-                    sizes="(max-width: 768px) 100vw, 1200px"
-                    onerror="this.style.display='none'"
-                  />
-                  {/* WebP format */}
-                  <source
-                    type="image/webp"
-                    srcset={`${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_optimized.webp")} 1x, ${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_640w.webp")} 640w, ${sourceProject.data.img.replace(/\.(jpg|jpeg|png|gif)$/i, "_1024w.webp")} 1024w`}
-                    sizes="(max-width: 768px) 100vw, 1200px"
-                    onerror="this.style.display='none'"
-                  />
-                  {/* Fallback format */}
+                {mainImageSources ? (
+                  <picture>
+                    {/* AVIF format */}
+                    <source
+                      type="image/avif"
+                      srcset={mainImageSources.avifSrcSet}
+                      sizes="(max-width: 768px) 100vw, 1200px"
+                    />
+                    {/* WebP format */}
+                    <source
+                      type="image/webp"
+                      srcset={mainImageSources.webpSrcSet}
+                      sizes="(max-width: 768px) 100vw, 1200px"
+                    />
+                    {/* Fallback format */}
+                    <img
+                      src={projectImageData.img}
+                      alt={projectImageData.img_alt || "Project image"}
+                      loading="lazy"
+                      decoding="async"
+                      onerror={`this.onerror=null;this.src=${JSON.stringify(mainImageFallbackSrc)};`}
+                    />
+                  </picture>
+                ) : (
                   <img
-                    src={sourceProject.data.img}
-                    alt={sourceProject.data.img_alt || "Project image"}
+                    src={projectImageData.img}
+                    alt={projectImageData.img_alt || "Project image"}
                     loading="lazy"
                     decoding="async"
-                    onerror="this.style.display='none'; console.warn('Failed to load image:', this.src);"
+                    onerror={`this.onerror=null;this.src=${JSON.stringify(mainImageFallbackSrc)};`}
                   />
-                </picture>
+                )}
               </div>
             </div>
           </div>
@@ -394,16 +429,17 @@ const projectMetadata = {
       </div>
 
       {
-        sourceProject.data.additionalImages &&
-          sourceProject.data.additionalImages.length > 0 && (
+        projectImageData.additionalImages &&
+          projectImageData.additionalImages.length > 0 && (
             <div class="additional-images">
               <h2>Project Gallery</h2>
               <ImageGallery
                 client:load
-                images={sourceProject.data.additionalImages.map(img => ({
+                images={projectImageData.additionalImages.map((img) => ({
                   url: img.url,
                   alt: img.alt || "",
-                  caption: img.caption
+                  caption: img.caption,
+                  fallbackUrl: img.fallbackUrl,
                 }))}
                 columns={3}
                 class="mt-6"

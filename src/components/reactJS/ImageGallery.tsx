@@ -5,6 +5,7 @@ interface GalleryImage {
   url: string;
   alt: string;
   caption?: string;
+  fallbackUrl?: string;
 }
 
 interface ImageGalleryProps {
@@ -49,6 +50,20 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   const finalClassName = `image-gallery ${className} ${classFromAstro}`.trim();
 
+  const handleImageError = (
+    event: React.SyntheticEvent<HTMLImageElement>,
+    fallbackUrl?: string,
+  ) => {
+    const resolvedFallback = fallbackUrl?.trim();
+    if (!resolvedFallback || event.currentTarget.src === resolvedFallback) {
+      event.currentTarget.onerror = null;
+      return;
+    }
+
+    event.currentTarget.onerror = null;
+    event.currentTarget.src = resolvedFallback;
+  };
+
   return (
     <>
       <div className={finalClassName}>
@@ -71,6 +86,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                   group-hover:scale-105
                 "
                 loading="lazy"
+                decoding="async"
+                onError={(event) => handleImageError(event, image.fallbackUrl)}
               />
               
               {/* Overlay */}
@@ -131,6 +148,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
                 loading="lazy"
                 decoding="async"
+                onError={(event) => handleImageError(event, selectedImage.fallbackUrl)}
               />
               
               {/* Navigation buttons */}

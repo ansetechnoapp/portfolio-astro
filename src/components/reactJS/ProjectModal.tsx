@@ -1,5 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import '../../styles/ProjectModal.css';
+import {
+  PORTFOLIO_FALLBACK_IMAGE,
+  buildResponsiveImageSources,
+} from '../../lib/portfolio-images';
 
 interface ProjectData {
   title: string;
@@ -9,6 +13,7 @@ interface ProjectData {
   tags: string[];
   img: string;
   img_alt?: string;
+  fallbackImg?: string;
   github?: string;
   liveDemo?: string;
   device?: string | undefined;
@@ -16,6 +21,8 @@ interface ProjectData {
   additionalImages?: Array<{
     url: string;
     alt?: string;
+    caption?: string;
+    fallbackUrl?: string;
   }>;
 }
 
@@ -33,6 +40,11 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   slug 
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const responsiveSources = buildResponsiveImageSources(projectData.img);
+  const fallbackImage =
+    projectData.fallbackImg?.trim() || projectData.img || PORTFOLIO_FALLBACK_IMAGE;
+  const [imageSrc, setImageSrc] = useState(projectData.img);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -54,6 +66,23 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
     };
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setImageSrc(projectData.img);
+  }, [isOpen, projectData.img]);
+
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image || !fallbackImage || imageSrc === fallbackImage) {
+      return;
+    }
+
+    if (image.complete && image.naturalWidth === 0) {
+      setImageSrc(fallbackImage);
+    }
+  }, [fallbackImage, imageSrc, isOpen]);
+
   const handleBackdropClick = (event: React.MouseEvent) => {
     // Only close if clicking directly on the backdrop, not on modal content
     if (event.target === event.currentTarget) {
@@ -64,6 +93,16 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   const handleModalContentClick = (event: React.MouseEvent) => {
     // Prevent event bubbling to backdrop
     event.stopPropagation();
+  };
+
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    if (!fallbackImage || event.currentTarget.src === fallbackImage) {
+      event.currentTarget.onerror = null;
+      return;
+    }
+
+    event.currentTarget.onerror = null;
+    setImageSrc(fallbackImage);
   };
 
   if (!isOpen) return null;
@@ -167,12 +206,35 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                 background: themeColors.gradient,
               }}
             />
-            <img
-              src={projectData.img}
-              alt={projectData.img_alt || projectData.title}
-              className="w-full h-full object-cover"
-              style={{ minHeight: '600px' }}
-            />
+            {responsiveSources ? (
+              <picture>
+                <source
+                  type="image/avif"
+                  srcSet={responsiveSources.avifSrcSet}
+                />
+                <source
+                  type="image/webp"
+                  srcSet={responsiveSources.webpSrcSet}
+                />
+                <img
+                  ref={imageRef}
+                  src={imageSrc}
+                  alt={projectData.img_alt || projectData.title}
+                  className="w-full h-full object-cover"
+                  style={{ minHeight: '600px' }}
+                  onError={handleImageError}
+                />
+              </picture>
+            ) : (
+              <img
+                ref={imageRef}
+                src={imageSrc}
+                alt={projectData.img_alt || projectData.title}
+                className="w-full h-full object-cover"
+                style={{ minHeight: '600px' }}
+                onError={handleImageError}
+              />
+            )}
             <div
               className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent project-image-overlay"
             />

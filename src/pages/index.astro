@@ -57,6 +57,7 @@ import {
   isApiRequiredMode,
 } from "../lib/portfolio-data-source";
 import { selectHomepageProjects } from "../lib/portfolio-home";
+import { mergePortfolioImages } from "../lib/portfolio-images";
 
 type ApiSkillRow = {
   name?: string | null;
@@ -152,16 +153,32 @@ type PreviewProject = {
     sortOrder?: number | null;
     img: string;
     img_alt?: string;
+    fallbackImg?: string;
     github?: string;
     liveDemo?: string;
     device?: string;
     additionalImages?: Array<{
       url: string;
       alt?: string;
+      caption?: string;
+      fallbackUrl?: string;
     }>;
     isBeta?: boolean;
   };
   render: () => Promise<unknown>;
+};
+
+type LocalWorkProject = {
+  slug: string;
+  data: {
+    img: string;
+    img_alt?: string;
+    additionalImages?: Array<{
+      url: string;
+      alt?: string;
+      caption?: string;
+    }>;
+  };
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -175,14 +192,6 @@ function normalizeUrl(value?: string | null): string | undefined {
   if (/^(https?:|mailto:|tel:)/i.test(trimmed)) return trimmed;
   if (trimmed.startsWith("/")) return trimmed;
   return `https://${trimmed.replace(/^\/+/, "")}`;
-}
-
-function normalizeImage(value?: string | null): string {
-  if (!value) return "/assets/social-preview.jpg";
-  const trimmed = value.trim();
-  if (!trimmed) return "/assets/social-preview.jpg";
-  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("/")) return trimmed;
-  return `/${trimmed.replace(/^\/+/, "")}`;
 }
 
 function toStringArray(value: unknown): string[] {
@@ -404,25 +413,36 @@ function normalizeTimelineEvent(row: ApiExperienceRow, index: number) {
   };
 }
 
-function normalizeProject(project: ApiProjectRow, index: number): PreviewProject {
+function normalizeProject(
+  project: ApiProjectRow,
+  index: number,
+  fallbackProject?: LocalWorkProject,
+): PreviewProject {
   const metadata = isRecord(project.metadata) ? project.metadata : {};
   const tags = uniqueStrings(toStringArray(metadata.tags));
   const additionalImages = Array.isArray(metadata.additionalImages)
     ? metadata.additionalImages
         .map((image) => {
           if (!isRecord(image)) return null;
-          const url = normalizeImage(
-            typeof image.url === "string" ? image.url : undefined,
-          );
           return {
-            url,
+            url: typeof image.url === "string" ? image.url : undefined,
             alt:
               typeof image.alt === "string"
                 ? image.alt
                 : project.title?.trim() || "Project image",
+            caption:
+              typeof image.caption === "string" ? image.caption : undefined,
           };
         })
-        .filter((image): image is { url: string; alt?: string } => Boolean(image))
+        .filter(
+          (
+            image,
+          ): image is {
+            url?: string;
+            alt?: string;
+            caption?: string;
+          } => Boolean(image),
+        )
     : [];
   const tech =
     uniqueStrings([
@@ -451,14 +471,19 @@ function normalizeProject(project: ApiProjectRow, index: number): PreviewProject
       tech,
       publishDate: new Date(),
       sortOrder: project.sortOrder ?? null,
-      img: normalizeImage(project.featuredImage),
-      img_alt: `${project.title?.trim() || "Project"} preview`,
+      ...mergePortfolioImages(
+        {
+          img: project.featuredImage,
+          img_alt: `${project.title?.trim() || "Project"} preview`,
+          additionalImages,
+        },
+        fallbackProject?.data,
+      ),
       github: normalizeUrl(project.repositoryUrl),
       liveDemo: normalizeUrl(project.projectUrl),
       device,
       tags,
       isBeta: Boolean(project.isBeta || tags.some((tag) => /beta/i.test(tag))),
-      additionalImages,
     },
     render: async () => ({}),
   };
@@ -538,10 +563,19 @@ const timelineData =
         .map((experience, index) => normalizeTimelineEvent(experience, index))
         .sort((a, b) => b.year - a.year)
     : timelineEvents;
+const localProjectsBySlug = new Map(
+  localProjects.map((project) => [project.slug, project]),
+);
 const projects =
   apiProjects.length > 0
     ? selectHomepageProjects(
-        apiProjects.map((project, index) => normalizeProject(project, index)),
+        apiProjects.map((project, index) =>
+          normalizeProject(
+            project,
+            index,
+            localProjectsBySlug.get(project.slug?.trim() || ""),
+          ),
+        ),
       )
     : selectHomepageProjects(localProjects);
 applyPortfolioResponseHeaders(Astro.response.headers, {

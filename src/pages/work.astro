@@ -23,6 +23,9 @@ const [localProjects, astroBootstrapResult] = await Promise.all([
   fetchPortfolioAstroBootstrap(Astro.url.origin),
 ]);
 const astroBootstrap = astroBootstrapResult.data;
+const localProjectsBySlug = new Map(
+  localProjects.map((project) => [project.slug, project]),
+);
 const portfolioDataMode = getPortfolioDataMode();
 if (
   isApiRequiredMode(portfolioDataMode) &&
@@ -37,7 +40,12 @@ const projects =
         .sort(
           (a, b) => Number(b.data.number ?? 0) - Number(a.data.number ?? 0),
         )
-        .map((project) => toPortfolioPreviewProject(project))
+        .map((project) =>
+          toPortfolioPreviewProject(
+            project,
+            localProjectsBySlug.get(project.slug?.trim() || ""),
+          ),
+        )
     : localProjects.sort(
         // (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf() filter by date
         (a, b) => b.data.number - a.data.number,

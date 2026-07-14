@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "../../styles/PortfolioPreview.css";
 import ProjectModal from "./ProjectModal";
 import Icon from "./Icon";
+import {
+  buildResponsiveImageSources,
+  PORTFOLIO_FALLBACK_IMAGE,
+} from "../../lib/portfolio-images";
 
 interface ProjectData {
   title: string;
@@ -11,6 +15,7 @@ interface ProjectData {
   tags: string[];
   img: string;
   img_alt?: string;
+  fallbackImg?: string;
   github?: string;
   liveDemo?: string;
   device?: string | undefined;
@@ -18,6 +23,8 @@ interface ProjectData {
   additionalImages?: Array<{
     url: string;
     alt?: string;
+    caption?: string;
+    fallbackUrl?: string;
   }>;
 }
 
@@ -41,6 +48,14 @@ export default function PortfolioPreview({ project, activeFilter = 'all' }: Port
   const isBetaProject = Boolean(
     data.isBeta || data.tags.some((tag) => /beta/i.test(tag)),
   );
+  const imageRef = useRef<HTMLImageElement>(null);
+  const fallbackImage = data.fallbackImg?.trim() || data.img || PORTFOLIO_FALLBACK_IMAGE;
+  const responsiveSources = buildResponsiveImageSources(data.img);
+  const [imageSrc, setImageSrc] = useState(data.img);
+
+  useEffect(() => {
+    setImageSrc(data.img);
+  }, [data.img]);
 
   useEffect(() => {
     const handleFilterChange = (e: CustomEvent) => {
@@ -54,6 +69,27 @@ export default function PortfolioPreview({ project, activeFilter = 'all' }: Port
       portfolioSection?.removeEventListener('filterChange', handleFilterChange as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image || !fallbackImage || imageSrc === fallbackImage) {
+      return;
+    }
+
+    if (image.complete && image.naturalWidth === 0) {
+      setImageSrc(fallbackImage);
+    }
+  }, [fallbackImage, imageSrc]);
+
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    if (!fallbackImage || event.currentTarget.src === fallbackImage) {
+      event.currentTarget.onerror = null;
+      return;
+    }
+
+    event.currentTarget.onerror = null;
+    setImageSrc(fallbackImage);
+  };
 
   // Don't render if filtered out and not showing all
   if (currentFilter !== 'all' && data.device !== currentFilter) {
@@ -78,22 +114,37 @@ export default function PortfolioPreview({ project, activeFilter = 'all' }: Port
     <React.Fragment>
       <article className="portfolio_item">
         <div className="portfolio_item-image">
-          <picture>
-            {/* AVIF format */}
-            <source
-              type="image/avif"
-              srcSet={`${data.img.replace(/\.(jpg|jpeg|png|gif)$/i, '_optimized.avif')} 1x, ${data.img.replace(/\.(jpg|jpeg|png|gif)$/i, '_640w.avif')} 640w, ${data.img.replace(/\.(jpg|jpeg|png|gif)$/i, '_1024w.avif')} 1024w`}
-              sizes="(max-width: 768px) 100vw, 400px"
+          {responsiveSources ? (
+            <picture>
+              <source
+                type="image/avif"
+                srcSet={responsiveSources.avifSrcSet}
+                sizes="(max-width: 768px) 100vw, 400px"
+              />
+              <source
+                type="image/webp"
+                srcSet={responsiveSources.webpSrcSet}
+                sizes="(max-width: 768px) 100vw, 400px"
+              />
+              <img
+                ref={imageRef}
+                src={imageSrc}
+                alt={data.img_alt || ''}
+                loading="lazy"
+                decoding="async"
+                onError={handleImageError}
+              />
+            </picture>
+          ) : (
+            <img
+              ref={imageRef}
+              src={imageSrc}
+              alt={data.img_alt || ''}
+              loading="lazy"
+              decoding="async"
+              onError={handleImageError}
             />
-            {/* WebP format */}
-            <source
-              type="image/webp"
-              srcSet={`${data.img.replace(/\.(jpg|jpeg|png|gif)$/i, '_optimized.webp')} 1x, ${data.img.replace(/\.(jpg|jpeg|png|gif)$/i, '_640w.webp')} 640w, ${data.img.replace(/\.(jpg|jpeg|png|gif)$/i, '_1024w.webp')} 1024w`}
-              sizes="(max-width: 768px) 100vw, 400px"
-            />
-            {/* Fallback format */}
-            <img src={data.img} alt={data.img_alt || ''} loading="lazy" decoding="async" />
-          </picture>
+          )}
           <div className="layer">
             <p>{data.description}</p>
             <a href={`/work/${slug}`} target="_blank" rel="noopener noreferrer"

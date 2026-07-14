@@ -7,6 +7,7 @@ import type {
   AstroBootstrapPayload,
   AstroBootstrapProject,
 } from "./portfolio-types";
+import { mergePortfolioImages, type PortfolioImageSource } from "./portfolio-images";
 
 export async function fetchPortfolioAstroBootstrap(
   requestOrigin?: string,
@@ -18,7 +19,19 @@ export async function fetchPortfolioAstroBootstrap(
   });
 }
 
-export function toPortfolioPreviewProject(project: AstroBootstrapProject) {
+export function toPortfolioPreviewProject(
+  project: AstroBootstrapProject,
+  fallback?: PortfolioImageSource,
+) {
+  const imageData = mergePortfolioImages(
+    {
+      img: project.data.img,
+      img_alt: project.data.img_alt,
+      additionalImages: project.data.additionalImages,
+    },
+    fallback,
+  );
+
   return {
     id: project.id,
     slug: project.slug,
@@ -33,8 +46,7 @@ export function toPortfolioPreviewProject(project: AstroBootstrapProject) {
         ? new Date(project.data.publishDate)
         : new Date(),
       tags: project.data.tags || [],
-      img: project.data.img || "/assets/social-preview.jpg",
-      img_alt: project.data.img_alt || undefined,
+      ...imageData,
       github: project.data.github || undefined,
       liveDemo: project.data.liveDemo || undefined,
       device: project.data.device || undefined,
@@ -42,7 +54,6 @@ export function toPortfolioPreviewProject(project: AstroBootstrapProject) {
         project.data.isBeta ||
           project.data.tags?.some((tag) => /beta/i.test(tag)),
       ),
-      additionalImages: project.data.additionalImages || [],
     },
   };
 }
