@@ -56,6 +56,7 @@ import {
   getPortfolioRuntimeConfig,
   isApiRequiredMode,
 } from "../lib/portfolio-data-source";
+import { selectHomepageProjects } from "../lib/portfolio-home";
 
 type ApiSkillRow = {
   name?: string | null;
@@ -148,6 +149,7 @@ type PreviewProject = {
     tech: string[];
     publishDate: Date;
     tags: string[];
+    sortOrder?: number | null;
     img: string;
     img_alt?: string;
     github?: string;
@@ -448,6 +450,7 @@ function normalizeProject(project: ApiProjectRow, index: number): PreviewProject
         "No description available.",
       tech,
       publishDate: new Date(),
+      sortOrder: project.sortOrder ?? null,
       img: normalizeImage(project.featuredImage),
       img_alt: `${project.title?.trim() || "Project"} preview`,
       github: normalizeUrl(project.repositoryUrl),
@@ -537,14 +540,10 @@ const timelineData =
     : timelineEvents;
 const projects =
   apiProjects.length > 0
-    ? apiProjects
-        .slice()
-        .sort((a, b) => Number(b.sortOrder ?? 0) - Number(a.sortOrder ?? 0))
-        .map((project, index) => normalizeProject(project, index))
-        .slice(0, 4)
-    : localProjects
-        .sort((a, b) => b.data.number - a.data.number)
-        .slice(0, 4);
+    ? selectHomepageProjects(
+        apiProjects.map((project, index) => normalizeProject(project, index)),
+      )
+    : selectHomepageProjects(localProjects);
 applyPortfolioResponseHeaders(Astro.response.headers, {
   source: portfolioApiResult.resolvedSource,
   mode: portfolioDataMode,
