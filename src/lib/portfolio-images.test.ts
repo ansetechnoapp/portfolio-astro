@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   buildResponsiveImageSources,
   mergePortfolioImages,
@@ -63,6 +65,23 @@ describe("portfolio-images", () => {
       webpSrcSet:
         "/assets/myprojects/example-image_optimized.webp 1x, /assets/myprojects/example-image_640w.webp 640w, /assets/myprojects/example-image_1024w.webp 1024w",
     });
+  });
+
+  test("ships every responsive variant used by the public work-page fallback", () => {
+    const sources = buildResponsiveImageSources(PORTFOLIO_FALLBACK_IMAGE);
+    expect(sources).not.toBeNull();
+
+    const referencedAssets = [sources!.avifSrcSet, sources!.webpSrcSet]
+      .flatMap((srcSet) => srcSet.split(","))
+      .map((entry) => entry.trim().split(/\s+/)[0])
+      .filter(Boolean);
+
+    for (const assetPath of referencedAssets) {
+      expect(
+        existsSync(resolve(import.meta.dir, "../../public", assetPath!.slice(1))),
+        `${assetPath} must exist in public/ because /work renders it as a picture source`,
+      ).toBe(true);
+    }
   });
 
   test("keeps the ZodBack image first and preserves the local fallback", () => {
