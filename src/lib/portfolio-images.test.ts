@@ -3,6 +3,7 @@ import {
   buildResponsiveImageSources,
   mergePortfolioImages,
   PORTFOLIO_FALLBACK_IMAGE,
+  resolvePortfolioImage,
 } from "./portfolio-images";
 
 describe("portfolio-images", () => {
@@ -12,6 +13,45 @@ describe("portfolio-images", () => {
         "https://api.zodev.live/api/shared-data/v1/media-public?path=shared-media%2F72%2Fimage.png",
       ),
     ).toBeNull();
+  });
+
+  test("serves static assets through the local portfolio origin", () => {
+    const hero =
+      "https://integrations-api.zodev.live/api/shared-data/v1/media-public?path=assets%2Fmyprojects%2Fwifizone-hero_optimized.webp";
+    const gallery =
+      "https://api.zodev.live/api/shared-data/v1/media-public?path=assets%2Fmyprojects%2Fboisenock-hero_optimized.webp";
+
+    expect(resolvePortfolioImage(hero)).toBe(
+      "/assets/myprojects/wifizone-hero_optimized.webp",
+    );
+    expect(resolvePortfolioImage(gallery)).toBe(
+      "/assets/myprojects/boisenock-hero_optimized.webp",
+    );
+
+    const result = mergePortfolioImages({
+      img: hero,
+      additionalImages: [{ url: gallery }],
+    });
+    expect(result.img).toBe("/assets/myprojects/wifizone-hero_optimized.webp");
+    expect(result.additionalImages[0]?.url).toBe(
+      "/assets/myprojects/boisenock-hero_optimized.webp",
+    );
+  });
+
+  test("keeps shared media on the public media endpoint", () => {
+    const url =
+      "https://integrations-api.zodev.live/api/shared-data/v1/media-public?path=shared-media%2F72%2Fimage.png";
+    expect(resolvePortfolioImage(url)).toBe(url);
+  });
+
+  test("does not map unsafe or unrelated proxy paths to local assets", () => {
+    const traversal =
+      "https://integrations-api.zodev.live/api/shared-data/v1/media-public?path=assets%2F..%2Fprivate.png";
+    const unrelatedHost =
+      "https://untrusted.example/api/shared-data/v1/media-public?path=assets%2Fmyprojects%2Fimage.png";
+
+    expect(resolvePortfolioImage(traversal)).toBe(traversal);
+    expect(resolvePortfolioImage(unrelatedHost)).toBe(unrelatedHost);
   });
 
   test("generates responsive variants for local public images", () => {

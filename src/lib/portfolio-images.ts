@@ -24,6 +24,15 @@ export type PortfolioImageResolution = {
   additionalImages: PortfolioResolvedImage[];
 };
 
+const PUBLIC_MEDIA_HOSTS = new Set([
+  "api.zodev.live",
+  "integrations-api.zodev.live",
+]);
+const PUBLIC_MEDIA_PATHS = new Set([
+  "/api/shared-data/v1/media-public",
+  "/shared-data/v1/media-public",
+]);
+
 type ResponsiveImageSources = {
   avifSrcSet: string;
   webpSrcSet: string;
@@ -34,9 +43,47 @@ function normalizeText(value?: string | null): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function resolveLocalStaticAssetProxy(value: string): string | undefined {
+  let url: URL;
+  try {
+    url = new URL(value, "https://integrations-api.zodev.live");
+  } catch {
+    return undefined;
+  }
+
+  if (
+    !PUBLIC_MEDIA_HOSTS.has(url.hostname.toLowerCase()) ||
+    !PUBLIC_MEDIA_PATHS.has(url.pathname)
+  ) {
+    return undefined;
+  }
+
+  const path = url.searchParams.get("path");
+  if (!path?.startsWith("assets/")) return undefined;
+
+  const segments = path.split("/");
+  if (
+    segments.some(
+      (segment) =>
+        !segment ||
+        segment === "." ||
+        segment === ".." ||
+        segment.includes("\\") ||
+        /[\u0000-\u001f]/.test(segment),
+    )
+  ) {
+    return undefined;
+  }
+
+  return `/${segments.map((segment) => encodeURIComponent(segment)).join("/")}`;
+}
+
 export function resolvePortfolioImage(value?: string | null): string | undefined {
   const trimmed = normalizeText(value);
   if (!trimmed) return undefined;
+
+  const localStaticAsset = resolveLocalStaticAssetProxy(trimmed);
+  if (localStaticAsset) return localStaticAsset;
 
   if (/^(https?:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
     return trimmed;
