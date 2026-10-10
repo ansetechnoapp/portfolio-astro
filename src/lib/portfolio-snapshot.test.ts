@@ -192,6 +192,21 @@ describe("zodback-astro-api", () => {
 
     expect(previewProject.data.isBeta).toBe(true);
   });
+
+  test("replaces an invalid publication date with a serializable date", () => {
+    const previewProject = toPortfolioPreviewProject({
+      id: "project-3",
+      slug: "invalid-date-project",
+      bodyMarkdown: "Project with a malformed publication date",
+      data: {
+        title: "Invalid date project",
+        description: "Preview project",
+        publishDate: "not-a-date",
+      },
+    } as AstroBootstrapProject);
+
+    expect(() => previewProject.data.publishDate.toISOString()).not.toThrow();
+  });
 });
 
 describe("portfolio-data-source", () => {

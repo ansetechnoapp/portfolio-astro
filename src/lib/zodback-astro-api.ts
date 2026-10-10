@@ -9,6 +9,13 @@ import type {
 } from "./portfolio-types";
 import { mergePortfolioImages, type PortfolioImageSource } from "./portfolio-images";
 
+function parsePublishDate(value: unknown): Date {
+  const date =
+    typeof value === "string" && value.trim() ? new Date(value) : new Date();
+
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
 export async function fetchPortfolioAstroBootstrap(
   requestOrigin?: string,
 ): Promise<PortfolioFetchResult<AstroBootstrapPayload>> {
@@ -42,9 +49,7 @@ export function toPortfolioPreviewProject(
       title: project.data.title,
       description: project.data.description,
       tech: project.data.tech || [],
-      publishDate: project.data.publishDate
-        ? new Date(project.data.publishDate)
-        : new Date(),
+      publishDate: parsePublishDate(project.data.publishDate),
       tags: project.data.tags || [],
       ...imageData,
       github: project.data.github || undefined,
