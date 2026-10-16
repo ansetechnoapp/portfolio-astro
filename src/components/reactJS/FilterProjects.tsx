@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-type FilterType = 'all' | 'web' | 'mobile';
+type FilterType = 'all' | 'web' | 'mobile' | 'desktop';
 
 interface FilterProjectsProps {
     onFilterChange?: (filter: FilterType) => void;
@@ -31,7 +31,7 @@ export default function FilterProjects({
             role="group" 
             aria-label="Project filters"
         >
-            {(['all', 'web', 'mobile'] as const).map((filter) => (
+            {(['all', 'web', 'mobile', 'desktop'] as const).map((filter) => (
                 <button
                     key={filter}
                     onClick={() => handleFilterClick(filter)}

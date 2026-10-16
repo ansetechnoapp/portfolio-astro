@@ -37,7 +37,7 @@ interface PortfolioPreviewProps {
     data: ProjectData;
     render(): Promise<unknown>;
   };
-  activeFilter?: 'all' | 'web' | 'mobile';
+  activeFilter?: 'all' | 'web' | 'mobile' | 'desktop';
 }
 
 export default function PortfolioPreview({ project, activeFilter = 'all' }: PortfolioPreviewProps) {
